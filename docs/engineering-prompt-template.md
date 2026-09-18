@@ -19,9 +19,14 @@ Thick-walled cylinder under internal pressure $p_i$, zero external pressure ($p_
 </inputs>
 
 <constraints>
-- Use SI units exclusively (Pa, m).
-- Do not assume external pressure unless explicitly stated.
-- Report stress components at $r = r_i$ and $r = r_o$.
+  <!-- Unit Enforcement Guardrail -->
+  <rule id="CR-01">
+    UNITS MUST BE STRICTLY UNIFIED PRIOR TO CALCULATION.
+    If input parameters mix unit scales (e.g., pressure in Pa while yield strength is in MPa), 
+    YOU MUST NOT AUTO-CONVERT THE VALUES. 
+    You MUST immediately halt execution, report an input error under <verification_status>, 
+    and request explicit unit alignment (all Pa or all MPa) from the user.
+  </rule>
 </constraints>
 
 <output_format>
