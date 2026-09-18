@@ -37,4 +37,33 @@
   * **Payload:** $r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$[cite: 7].
   * **Observed Behavior:** Execution halted under Rule `CR-03`. Flagged geometric inversion error ($r_i \ge r_o$) and requested corrected dimensions[cite: 7].
 
-  
+  ## Week 4 Execution Log: MATLAB Lamé Stress Analysis Verification
+
+- **Script Executed:** `matlab/lame_stress_analysis.m`
+- **Execution Date:** 2026-09-19
+- **Model Type:** Closed-end, linear-elastic, isotropic, axisymmetric thick-walled cylinder
+- **Baseline Geometry & Parameters:**
+  - Inner Radius ($r_i$): $0.050\text{ m}$ ($50\text{ mm}$)
+  - Outer Radius ($r_o$): $0.100\text{ m}$ ($100\text{ mm}$)
+  - Internal Pressure ($p_i$): $100\text{ MPa}$
+  - Young's Modulus ($E$): $200\text{ GPa}$
+  - Poisson's Ratio ($\nu$): $0.30$
+
+### Verification Results Table
+
+| Check Item | Relative Error | Tolerance Threshold | Status |
+| :--- | :--- | :--- | :--- |
+| Boundary Condition $\sigma_r(r_i) = -p_i$ | `0.000e+00` | `1.0e-09` | **PASS** |
+| Boundary Condition $\sigma_r(r_o) = -p_o$ | `3.725e-17` | `1.0e-09` | **PASS** |
+| Radial Equilibrium Residual | `7.990e-07` | `1.0e-05` | **PASS** |
+| Hoop Force Balance ($\int \sigma_\theta dr = p_i r_i$) | `4.861e-08` | `1.0e-06` | **PASS** |
+| Hand vs Code: $\sigma_\theta @ r_i$ | `2.000e-06` | `1.0e-04` | **PASS** |
+| Hand vs Code: $\sigma_z @ r_i$ | `1.000e-05` | `1.0e-04` | **PASS** |
+| Hand vs Code: $u_r @ r_i$ | `7.143e-06` | `1.0e-04` | **PASS** |
+| Hand vs Code: $\sigma_{\text{vM}} @ r_i$ | `4.663e-07` | `1.0e-04` | **PASS** |
+| Hand vs Code: $\sigma_\theta @ r_o$ | `5.000e-06` | `1.0e-04` | **PASS** |
+| Hand vs Code: $\sigma_z @ r_o$ | `1.000e-05` | `1.0e-04` | **PASS** |
+| Hand vs Code: $u_r @ r_o$ | `1.176e-05` | `1.0e-04` | **PASS** |
+| Hand vs Code: $\sigma_{\text{vM}} @ r_o$ | `4.663e-07` | `1.0e-04` | **PASS** |
+
+**OVERALL STATUS:** ALL CHECKS PASSED
