@@ -23,3 +23,18 @@
 ## 5. System Execution & Output Schema
 * **Reasoning Trace:** Enforce mandatory <thinking> tags requiring step-by-step substitution into Lame equations.
 * **Structured Tagging:** Isolate finalized numeric values within explicit XML containers (<stress_results>, <verification_status>).
+
+# Test Log
+* **FLT-01 (Unit Mismatch Fault):** PASS
+  * **Payload:** $p_i = 250,000,000\text{ Pa}$, $\sigma_y = 800\text{ MPa}$.
+  * **Observed Behavior:** Execution halted under Rule `CR-01`. Error flagged for mixed pressure units[cite: 7].
+
+* **FLT-02 (Missing Variable Fault):** PASS
+  * **Payload:** Omitted `<sig_y>` parameter from material properties.
+  * **Observed Behavior:** Execution halted under Rule `CR-02`. Model refused to assume default material properties and requested explicit yield strength[cite: 7].
+
+  * **FLT-03 (Geometric Inversion Fault):** PASS
+  * **Payload:** $r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$[cite: 7].
+  * **Observed Behavior:** Execution halted under Rule `CR-03`. Flagged geometric inversion error ($r_i \ge r_o$) and requested corrected dimensions[cite: 7].
+
+  
