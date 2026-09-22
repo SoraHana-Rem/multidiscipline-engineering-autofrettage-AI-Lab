@@ -1,9 +1,12 @@
-"""
-Thin-wall pressure vessel calculations (r/t >= 10).
-Hoop stress: sigma_h = (P * r) / t
-Longitudinal stress: sigma_l = (P * r) / (2 * t)
-"""
+"""Thin-wall pressure vessel physics calculations."""
 
-def calculate_thin_wall_stress(pressure: float, radius: float, thickness: float) -> float:
-    """Calculates hoop stress for thin-walled pressure vessels."""
-    return (pressure * radius) / thickness
+def calculate_thin_wall_stress(P: float, r_i: float, t: float) -> float:
+    """Calculates thin-wall hoop stress: sigma_h = (P * r_i) / t."""
+    return (P * r_i) / t
+
+def hoop_stress(P: float, r_i: float, t: float) -> float:
+    return calculate_thin_wall_stress(P, r_i, t)
+
+def longitudinal_stress(P: float, r_i: float, t: float) -> float:
+    """Calculates thin-wall longitudinal stress: sigma_l = (P * r_i) / (2 * t)."""
+    return (P * r_i) / (2.0 * t)

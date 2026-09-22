@@ -4,6 +4,9 @@ Unit tests for thin-wall, thick-wall Lamé, and failure safety factor calculatio
 
 import math
 import pytest
+import numpy as np
+import pytest
+from python.lame_stress import calculate_lame_stresses
 from src.physics.thin_wall import calculate_thin_wall_stress
 from src.physics.thick_wall import calculate_thick_wall_stress
 from src.physics.failure import calculate_safety_factor
@@ -30,3 +33,23 @@ def test_safety_factor_valid():
 def test_safety_factor_zero_stress():
     with pytest.raises(ZeroDivisionError):
         calculate_safety_factor(equivalent_stress=0.0, yield_strength=500e6)
+
+
+def test_lame_inner_outer_boundary_conditions():
+    # Setup test case: r_i = 50mm, r_o = 100mm, P_i = 100 MPa
+    data = calculate_lame_stresses(r_i=0.050, r_o=0.100, P_i=100e6)
+
+    # 1. Inner boundary check: radial stress must match -P_i (-100 MPa)
+    assert np.isclose(data["s_r"][0], -100e6, atol=1e-3)
+
+    # 2. Outer boundary check: radial stress must equal 0 MPa
+    assert np.isclose(data["s_r"][-1], 0.0, atol=1e-3)
+
+    # 3. Inner hoop stress check: 166.667 MPa
+    assert np.isclose(data["s_t"][0], 166.6667e6, rtol=1e-4)
+
+
+def test_invalid_radius_guardrail():
+    # Verify ValueError is raised when inner radius >= outer radius
+    with pytest.raises(ValueError, match="Inner radius"):
+        calculate_lame_stresses(r_i=0.100, r_o=0.050, P_i=100e6)
