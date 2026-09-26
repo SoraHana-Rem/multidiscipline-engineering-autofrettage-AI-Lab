@@ -30,17 +30,25 @@ from src.config.limits import (
 from src.errors import ValidationError
 
 
-def validate_inputs(P: float, r_i: float, t: float, sigma_y: float) -> tuple[float, float, float, float]:
-    """
-    Validates input parameters against single-source-of-truth limits.
-    Returns inputs converted to float upon successful validation.
-    """
-    params = [
-        ("Pressure", P, PRESSURE_MIN, PRESSURE_MAX, "P"),
-        ("Inner radius", r_i, RADIUS_MIN, RADIUS_MAX, "r_i"),
-        ("Wall thickness", t, THICKNESS_MIN, THICKNESS_MAX, "t"),
-        ("Yield strength", sigma_y, YIELD_MIN, YIELD_MAX, "sigma_y"),
-    ]
+"""
+Input validation utilities for pressure vessel analysis.
+"""
+
+def validate_inputs(P, r_i, t, sigma_y):
+    """Validates pressure vessel inputs, ensuring non-boolean positive floats."""
+    for val, name in [(P, "P"), (r_i, "r_i"), (t, "t"), (sigma_y, "sigma_y")]:
+        # Explicit boolean rejection
+        if isinstance(val, bool):
+            raise TypeError(f"Invalid input for {name}: Booleans are not permitted.")
+        
+        if not isinstance(val, (int, float)):
+            raise TypeError(f"Invalid input for {name}: Must be numeric.")
+            
+        if val <= 0:
+            raise ValueError(f"Invalid input for {name}: Must be positive.")
+            
+    return float(P), float(r_i), float(t), float(sigma_y)
+
 
     # 1. Type validation (REQ-TYP-001..004)
     for name, val, _, _, _ in params:
