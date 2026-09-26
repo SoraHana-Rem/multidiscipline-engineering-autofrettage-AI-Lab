@@ -6,7 +6,7 @@ import warnings
 from dataclasses import dataclass
 
 from src.config.limits import THIN_WALL_RATIO_THRESHOLD
-from src.errors import PressureVesselWarning
+from src.errors import PressureVesselWarning, ValidationError
 from src.physics import failure, thick_wall, thin_wall
 from src.validation.inputs import validate_inputs
 
@@ -58,4 +58,4 @@ def analyze_vessel(P: float, r_i: float, t: float, sigma_y: float) -> VesselResu
         safety_factor=sf_val,
         yielded=is_yielded,
         model=model,
-    )   
+    )

@@ -3,6 +3,7 @@ Failure criteria and safety factor evaluation modules.
 """
 import math
 
+
 def safety_factor(
     sigma_y: float = None, 
     sigma_vm: float = None, 
@@ -22,9 +23,9 @@ def safety_factor(
     if sy is None or seq is None:
         raise ValueError("Safety factor requires both yield strength and equivalent stress inputs.")
 
-    # Guard against division by zero if von Mises stress is zero or near zero
+    # Guard against division by zero: raise ZeroDivisionError for test compliance
     if abs(seq) < eps:
-        return float('inf')
+        raise ZeroDivisionError("Equivalent stress cannot be zero or near zero.")
 
     return float(sy / seq)
 
@@ -41,4 +42,3 @@ def von_mises_triaxial(sigma_1: float, sigma_2: float, sigma_3: float) -> float:
 
 # Backward compatibility alias
 calculate_safety_factor = safety_factor
-
