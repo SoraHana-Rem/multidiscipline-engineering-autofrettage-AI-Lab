@@ -58,4 +58,4 @@ def analyze_vessel(P: float, r_i: float, t: float, sigma_y: float) -> VesselResu
         safety_factor=sf_val,
         yielded=is_yielded,
         model=model,
-    )
+    )   
