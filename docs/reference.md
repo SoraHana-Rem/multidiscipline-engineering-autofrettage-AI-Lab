@@ -31,3 +31,31 @@ $$\sigma_{\theta, res}(r) = \sigma_{\theta, load}(r) - \sigma_{\theta, unload}(r
 
 5. **Parker, A. P. (2001).** "Autofrettage of High Pressure Cylinders." *International Journal of Pressure Vessels and Piping*, 78(11-12), 807-815.
    - *Comprehensive review of residual stress distributions, Bauschinger effect considerations, and fatigue life enhancements in thick-walled tubes.*
+
+
+
+   week7:
+   ## 4. Linear Elastic Fracture Mechanics (LEFM) & Paris Law
+
+### Stress Intensity Factor ($K_I$)
+For an internal radial surface crack of depth $a$, the Mode-I Stress Intensity Factor under net hoop stress $\sigma_{\theta}$ is:
+
+$$K_I = Y \cdot \sigma_{\theta} \cdot \sqrt{\pi a}$$
+
+where $Y \approx 1.12$ is the boundary correction factor for an inner-bore surface crack.
+
+### Critical Crack Depth ($a_c$)
+Fast fracture occurs when $K_{I, \text{max}} = K_{Ic}$ (Material Fracture Toughness):
+
+$$a_c = \frac{1}{\pi} \left( \frac{K_{Ic}}{Y \cdot \sigma_{\text{max}}} \right)^2$$
+
+### Paris Law Fatigue Crack Growth
+The rate of fatigue crack propagation per operational pressure cycle ($N$) is given by:
+
+$$\frac{da}{dN} = C (\Delta K)^m \implies N_f = \int_{a_i}^{a_c} \frac{da}{C \left( Y \Delta\sigma \sqrt{\pi a} \right)^m}$$
+
+---
+
+### Academic & Technical References (Fracture Mechanics)
+1. **Paris, P., & Erdogan, F. (1963).** "A Critical Analysis of Crack Propagation Laws." *Journal of Basic Engineering*, 85(4), 528-534.
+2. **Tada, H., Paris, P. C., & Irwin, G. R. (2000).** *The Stress Analysis of Cracks Handbook* (3rd ed.). ASME Press.
