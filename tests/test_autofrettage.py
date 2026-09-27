@@ -1,16 +1,13 @@
 """
 Unit tests for Week 6 autofrettage plastic zone calculations.
 """
-
-"""
-Unit tests for Week 6 autofrettage plastic zone calculations.
-"""
 import pytest
 from src.errors import ValidationError
 from src.physics.autofrettage import (
     calculate_plastic_radius,
     calculate_autofrettage_stresses,
 )
+
 
 def test_plastic_radius_valid_range():
     r_i = 100.0
@@ -28,13 +25,17 @@ def test_plastic_radius_below_yield_raises_error():
     with pytest.raises(ValidationError, match="below initial yield pressure"):
         calculate_plastic_radius(P_auto=50.0, r_i=100.0, r_o=200.0, sigma_y=500.0)
 
+def test_residual_radial_stress_free_surface_boundary_conditions():
+    r_i, r_o, sigma_y, P_auto = 100.0, 200.0, 500.0, 250.0
+    results = calculate_autofrettage_stresses(P_auto, r_i, r_o, sigma_y)
+
+    # Radial residual stress must vanish at free boundaries (r_i and r_o)
+    assert pytest.approx(results["sigma_r_res"][0], abs=1e-4) == 0.0
+    assert pytest.approx(results["sigma_r_res"][-1], abs=1e-4) == 0.0
 
 def test_plastic_radius_exceeds_full_yield_raises_error():
     with pytest.raises(ValidationError, match="exceeds or equals full yield pressure"):
         calculate_plastic_radius(P_auto=500.0, r_i=100.0, r_o=200.0, sigma_y=500.0)
-
-
-        from src.physics.autofrettage import calculate_autofrettage_stresses
 
 
 def test_residual_hoop_stress_is_compressive_at_bore():
@@ -44,7 +45,7 @@ def test_residual_hoop_stress_is_compressive_at_bore():
     # Inner bore (index 0) must have negative (compressive) residual hoop stress
     hoop_res_inner = results["sigma_theta_res"][0]
     assert hoop_res_inner < 0.0
-    
+
     # Outer wall (index -1) must have tensile residual hoop stress (reacting force)
     hoop_res_outer = results["sigma_theta_res"][-1]
     assert hoop_res_outer > 0.0
