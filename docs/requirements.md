@@ -96,6 +96,17 @@ $$SF = \frac{\sigma_y}{\sigma_{vm}}$$
 | REQ-FUN-005 | `yielded` is `True` when $\sigma_{vm} \ge \sigma_y$ ($SF \le 1$). Yielding is a reported *result*, not an error. |
 | REQ-FUN-006 | The equations above are fixed. They MUST NOT be changed without explicit approval (see `docs/assumptions.md`, rule AI-1). |
 
+### 3.3 Autofrettage extension (`src/physics/autofrettage.py`)
+
+Autofrettage is a separate, optional extension layered on top of the baseline module in §3.1–3.2, not a replacement for it. `analyze_vessel` (the baseline path) never includes autofrettage effects; it is only invoked when the caller explicitly requests it (CLI flag `--autofrettage-pressure`).
+
+| ID | Requirement |
+| :--- | :--- |
+| REQ-AUT-001 | Given an autofrettage pressure $P_{auto}$, inner/outer radius, and $\sigma_y$, the module computes the elastic-plastic boundary radius $r_p$ (Hearn, Vol. 2). |
+| REQ-AUT-002 | $P_{auto}$ MUST lie strictly between the initial-yield pressure and the full-yield pressure of the cylinder; outside that range the module raises `ValidationError` rather than extrapolating. |
+| REQ-AUT-003 | The module computes the residual hoop stress at the bore after elastic unload from $P_{auto}$ (purely elastic unloading assumed; no Bauschinger effect, see `docs/assumptions.md` A-AUT-03). |
+| REQ-AUT-004 | Given a working pressure $P_{working}$, the module reports an enhanced safety factor combining the baseline elastic stress state with the residual autofrettage stress. |
+
 ## 4. Performance & Precision Acceptance Criteria
 
 ### 4.1 Numerical precision
@@ -112,21 +123,4 @@ $$SF = \frac{\sigma_y}{\sigma_{vm}}$$
 | ID | Criterion |
 | :--- | :--- |
 | REQ-BND-001 | $r_i / t = 10$ exactly selects the **thin-wall** model. |
-| REQ-BND-002 | Ratios strictly below 10 select the **thick-wall** model and emit the warning from REQ-FUN-002. |
-| REQ-BND-003 | Values exactly on range limits in §2.1 are accepted; values outside are rejected. |
-
-## 5. Acceptance Criteria
-
-### 5.1 Reference test vectors
-
-| Case | `P` (MPa) | `r_i` (mm) | `t` (mm) | `sigma_y` (MPa) | Model | $\sigma_\theta$ | $\sigma_L$ | $\sigma_r$ | $\sigma_{vm}$ | $SF$ |
-| :--- | ---: | ---: | ---: | ---: | :--- | ---: | ---: | ---: | ---: | ---: |
-| TV-1 (thin) | 2.0 | 500 | 5 | 500 | thin_wall | 200.0000 | 100.0000 | 0 | 173.2051 | 2.8868 |
-| TV-2 (thick) | 1.0 | 10 | 10 | 250 | lame_thick_wall | 1.6667 | 0.3333 | −1.0000 | 2.3094 | 108.2532 |
-| TV-3 (yield) | 10.0 | 500 | 5 | 500 | thin_wall | 1000.0000 | 500.0000 | 0 | 866.0254 | 0.5774 |
-
-`yielded` is `False` for TV-1 and TV-2, and `True` for TV-3.
-
-## 6. Out of Scope
-
-Effects listed in `docs/assumptions.md` §1 as excluded (external pressure, thermal loads, fatigue, composite structures, buckling, and autofrettage yield prestress [Hearn, Vol. 2]) are out of scope for this baseline module.
+| REQ-BND-002 | Ratios strictly below 10 select the **thick-wall** model

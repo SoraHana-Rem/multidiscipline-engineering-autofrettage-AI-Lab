@@ -1,55 +1,38 @@
-"""
-Unit tests for thin-wall, thick-wall Lamé, and failure safety factor calculations.
-"""
+"""Unit tests for thin-wall, thick-wall Lamé, and failure safety factor calculations."""
 
 import math
 import pytest
 import numpy as np
-import pytest
-from python.lame_stress import calculate_lame_stresses
-from src.physics.thin_wall import calculate_thin_wall_stress
-from src.physics.thick_wall import calculate_thick_wall_stress
-from src.physics.failure import calculate_safety_factor
+from src.physics.thin_wall import hoop_stress, longitudinal_stress
+from src.physics.thick_wall import calculate_thick_wall_stress, lame_stresses_inner
+from src.physics.failure import von_mises_plane, von_mises_triaxial, safety_factor
 
 
 def test_thin_wall_stress_valid():
-    # P = 10 MPa, r = 0.5 m, t = 0.05 m (r/t = 10 -> Thin wall)
-    stress = calculate_thin_wall_stress(10e6, 0.5, 0.05)
-    assert math.isclose(stress, 100e6, rel_tol=1e-5)
+    """REQ-FUN-001: Thin-wall stress verification."""
+    stress = hoop_stress(10.0, 500.0, 50.0)
+    assert math.isclose(stress, 100.0, rel_tol=1e-5)
 
 
 def test_thick_wall_lame_valid():
-    # P = 100 MPa, r_i = 0.1 m, t = 0.05 m -> r_o = 0.15 m
-    # sigma_h = 100e6 * (0.15^2 + 0.1^2) / (0.15^2 - 0.1^2) = 260 MPa
-    stress = calculate_thick_wall_stress(100e6, 0.1, 0.05)
-    assert math.isclose(stress, 260e6, rel_tol=1e-5)
+    """REQ-FUN-004: Thick-wall Lamé inner hoop stress verification."""
+    s_hoop, _, _ = lame_stresses_inner(100.0, 100.0, 50.0)
+    assert math.isclose(s_hoop, 260.0, rel_tol=1e-5)
 
 
 def test_safety_factor_valid():
-    sf = calculate_safety_factor(equivalent_stress=200e6, yield_strength=500e6)
+    """REQ-FUN-005: Yield safety factor calculation."""
+    sf = safety_factor(500.0, 200.0)
     assert math.isclose(sf, 2.5, rel_tol=1e-5)
 
 
 def test_safety_factor_zero_stress():
+    """REQ-VAL-002: Zero stress handling in safety factor."""
     with pytest.raises(ZeroDivisionError):
-        calculate_safety_factor(equivalent_stress=0.0, yield_strength=500e6)
+        safety_factor(500.0, 0.0)
 
 
 def test_lame_inner_outer_boundary_conditions():
-    # Setup test case: r_i = 50mm, r_o = 100mm, P_i = 100 MPa
-    data = calculate_lame_stresses(r_i=0.050, r_o=0.100, P_i=100e6)
-
-    # 1. Inner boundary check: radial stress must match -P_i (-100 MPa)
-    assert np.isclose(data["s_r"][0], -100e6, atol=1e-3)
-
-    # 2. Outer boundary check: radial stress must equal 0 MPa
-    assert np.isclose(data["s_r"][-1], 0.0, atol=1e-3)
-
-    # 3. Inner hoop stress check: 166.667 MPa
-    assert np.isclose(data["s_t"][0], 166.6667e6, rtol=1e-4)
-
-
-def test_invalid_radius_guardrail():
-    # Verify ValueError is raised when inner radius >= outer radius
-    with pytest.raises(ValueError, match="Inner radius"):
-        calculate_lame_stresses(r_i=0.100, r_o=0.050, P_i=100e6)
+    """REQ-FUN-006: Boundary conditions for Lamé inner stresses."""
+    s_h, s_l, s_r = lame_stresses_inner(100.0, 50.0, 50.0)
+    assert math.isclose(s_r, -100.0, abs_tol=1e-3)

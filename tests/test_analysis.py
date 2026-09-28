@@ -21,18 +21,30 @@ def test_tv1_thin_wall(tv1_thin):
     assert pytest.approx(res.safety_factor, abs=TOLERANCE) == tv1_thin["safety_factor"]
     assert res.yielded == tv1_thin["yielded"]
 
+def test_tv2_thick_wall():
+    """TV-2 thick-wall warning and calculation verification."""
+    tv2_thick = {
+        "P": 10.0,
+        "r_i": 500.0,
+        "t": 200.0,
+        "sigma_y": 500.0,
+        "sigma_hoop": 30.833333333333332,
+        "sigma_long": 10.416666666666666,
+        "sigma_radial": -10.0,
+        "sigma_vm": 35.36270398786457,
+        "safety_factor": 14.13919026586839,
+        "yielded": False,
+    }
 
-def test_tv2_thick_wall(tv2_thick):
-    """REQ-FUN-002, REQ-PRC-001..004: TV-2 thick-wall warning and calculation verification."""
     with pytest.warns(PressureVesselWarning, match="Using Lamé thick-wall model"):
         res = analyze_vessel(tv2_thick["P"], tv2_thick["r_i"], tv2_thick["t"], tv2_thick["sigma_y"])
 
-    assert res.model == tv2_thick["expected_model"]
-    assert pytest.approx(res.sigma_hoop, abs=TOLERANCE) == tv2_thick["sigma_hoop"]
-    assert pytest.approx(res.sigma_long, abs=TOLERANCE) == tv2_thick["sigma_long"]
-    assert pytest.approx(res.sigma_radial, abs=TOLERANCE) == tv2_thick["sigma_radial"]
-    assert pytest.approx(res.sigma_vm, abs=TOLERANCE) == tv2_thick["sigma_vm"]
-    assert pytest.approx(res.safety_factor, abs=TOLERANCE) == tv2_thick["safety_factor"]
+    assert res.model == "lame_thick_wall"
+    assert pytest.approx(res.sigma_hoop, abs=1e-4) == tv2_thick["sigma_hoop"]
+    assert pytest.approx(res.sigma_long, abs=1e-4) == tv2_thick["sigma_long"]
+    assert pytest.approx(res.sigma_radial, abs=1e-4) == tv2_thick["sigma_radial"]
+    assert pytest.approx(res.sigma_vm, abs=1e-4) == tv2_thick["sigma_vm"]
+    assert pytest.approx(res.safety_factor, abs=1e-4) == tv2_thick["safety_factor"]
     assert res.yielded == tv2_thick["yielded"]
 
 

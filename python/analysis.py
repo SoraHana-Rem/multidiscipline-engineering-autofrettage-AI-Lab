@@ -19,9 +19,9 @@ r = np.linspace(r_i, r_o, 100)  # 100 points from inner to outer radius
 A = (P_i * r_i**2 - P_o * r_o**2) / (r_o**2 - r_i**2)
 B = (r_i**2 * r_o**2 * (P_o - P_i)) / (r_o**2 - r_i**2)
 
-sigma_theta = A + B / r**2  # Hoop stress
-sigma_r = A - B / r**2      # Radial stress
-
+# Radial stress must equal -P_i at the inner wall
+sigma_r = A + B / r**2       # -100.0 MPa at r = r_i
+sigma_theta = A - B / r**2   # +166.67 MPa at r = r_i
 #4. Pandas data hadning : Export results to CSV
 
 df = pd.DataFrame({
