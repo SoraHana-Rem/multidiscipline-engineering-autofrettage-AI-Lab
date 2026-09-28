@@ -3,13 +3,14 @@ Unit tests for thin-wall, thick-wall Lamé, and failure safety factor calculatio
 """
 
 import math
-import pytest
+
 import numpy as np
 import pytest
+
 from python.lame_stress import calculate_lame_stresses
-from src.physics.thin_wall import calculate_thin_wall_stress
+from src.physics.failure import safety_factor
 from src.physics.thick_wall import calculate_thick_wall_stress
-from src.physics.failure import calculate_safety_factor
+from src.physics.thin_wall import calculate_thin_wall_stress
 
 
 def test_thin_wall_stress_valid():
@@ -26,13 +27,23 @@ def test_thick_wall_lame_valid():
 
 
 def test_safety_factor_valid():
-    sf = calculate_safety_factor(equivalent_stress=200e6, yield_strength=500e6)
+    sf = safety_factor(sigma_y=500e6, sigma_vm=200e6)
     assert math.isclose(sf, 2.5, rel_tol=1e-5)
 
 
 def test_safety_factor_zero_stress():
     with pytest.raises(ZeroDivisionError):
-        calculate_safety_factor(equivalent_stress=0.0, yield_strength=500e6)
+        safety_factor(sigma_y=500e6, sigma_vm=0.0)
+
+
+def test_safety_factor_negative_stress():
+    with pytest.raises(ValueError):
+        safety_factor(sigma_y=500e6, sigma_vm=-1.0)
+
+
+def test_safety_factor_rejects_bool():
+    with pytest.raises(TypeError):
+        safety_factor(sigma_y=True, sigma_vm=200e6)
 
 
 def test_lame_inner_outer_boundary_conditions():

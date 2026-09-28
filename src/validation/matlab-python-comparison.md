@@ -64,7 +64,5 @@ pytest tests/test_cross_validation.py
 - **Internal Pressure ($P_i$):** `10.0 MPa`
 - **Radial Points Evaluated:** `100`
 
-| Metric | Max Relative Error | Status | Target Threshold |
-| :--- | :--- | :--- | :--- |
-| **Radial Stress ($\sigma_r$)** | `0.0000e+00` | `PASS` | $< 1.0 \times 10^{-5}$ |
-| **Hoop Stress ($\sigma_\theta$)** | `0.0000e+00` | `PASS` | $< 1.0 \times 10^{-5}$ |
+| **Radial Stress ($\sigma_r$)** | $\le 1.7136 \times 10^{-14}$ (combined max) | `PASS` | $< 1.0 \times 10^{-5}$ |
+| **Hoop Stress ($\sigma_\theta$)** | $\le 1.7136 \times 10^{-14}$ (combined max) | `PASS` | $< 1.0 \times 10^{-5}$ |

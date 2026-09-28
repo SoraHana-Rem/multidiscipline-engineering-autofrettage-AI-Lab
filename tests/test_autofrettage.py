@@ -1,6 +1,7 @@
 """
 Unit tests for Week 6 autofrettage plastic zone calculations.
 """
+
 import pytest
 from src.errors import ValidationError
 from src.physics.autofrettage import (
@@ -25,6 +26,7 @@ def test_plastic_radius_below_yield_raises_error():
     with pytest.raises(ValidationError, match="below initial yield pressure"):
         calculate_plastic_radius(P_auto=50.0, r_i=100.0, r_o=200.0, sigma_y=500.0)
 
+
 def test_residual_radial_stress_free_surface_boundary_conditions():
     r_i, r_o, sigma_y, P_auto = 100.0, 200.0, 500.0, 250.0
     results = calculate_autofrettage_stresses(P_auto, r_i, r_o, sigma_y)
@@ -32,6 +34,7 @@ def test_residual_radial_stress_free_surface_boundary_conditions():
     # Radial residual stress must vanish at free boundaries (r_i and r_o)
     assert pytest.approx(results["sigma_r_res"][0], abs=1e-4) == 0.0
     assert pytest.approx(results["sigma_r_res"][-1], abs=1e-4) == 0.0
+
 
 def test_plastic_radius_exceeds_full_yield_raises_error():
     with pytest.raises(ValidationError, match="exceeds or equals full yield pressure"):

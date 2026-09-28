@@ -1,12 +1,12 @@
 """
 Orchestrates pressure vessel analysis by linking validation, model selection, physics calculations, and yielding evaluation.
 """
+
 import math
 import warnings
 from dataclasses import dataclass
-
+from src.errors import PressureVesselWarning
 from src.config.limits import THIN_WALL_RATIO_THRESHOLD
-from src.errors import PressureVesselWarning, ValidationError
 from src.physics import failure, thick_wall, thin_wall
 from src.validation.inputs import validate_inputs
 
@@ -48,7 +48,9 @@ def analyze_vessel(P: float, r_i: float, t: float, sigma_y: float) -> VesselResu
 
     outputs = (s_hoop, s_long, s_radial, s_vm, sf_val)
     if not all(math.isfinite(val) for val in outputs):
-        raise ArithmeticError("Non-finite numerical result encountered during computation.")
+        raise ArithmeticError(
+            "Non-finite numerical result encountered during computation."
+        )
 
     return VesselResult(
         sigma_hoop=s_hoop,

@@ -1,6 +1,7 @@
 """
 Integration tests for analyze_vessel orchestrator (REQ-FUN, REQ-PRC, REQ-BND).
 """
+
 import warnings
 import pytest
 
@@ -12,7 +13,9 @@ TOLERANCE = 1e-4
 
 def test_tv1_thin_wall(tv1_thin):
     """REQ-PRC-001..004: TV-1 thin-wall integration verification."""
-    res = analyze_vessel(tv1_thin["P"], tv1_thin["r_i"], tv1_thin["t"], tv1_thin["sigma_y"])
+    res = analyze_vessel(
+        tv1_thin["P"], tv1_thin["r_i"], tv1_thin["t"], tv1_thin["sigma_y"]
+    )
     assert res.model == tv1_thin["expected_model"]
     assert pytest.approx(res.sigma_hoop, abs=TOLERANCE) == tv1_thin["sigma_hoop"]
     assert pytest.approx(res.sigma_long, abs=TOLERANCE) == tv1_thin["sigma_long"]
@@ -25,7 +28,9 @@ def test_tv1_thin_wall(tv1_thin):
 def test_tv2_thick_wall(tv2_thick):
     """REQ-FUN-002, REQ-PRC-001..004: TV-2 thick-wall warning and calculation verification."""
     with pytest.warns(PressureVesselWarning, match="Using Lamé thick-wall model"):
-        res = analyze_vessel(tv2_thick["P"], tv2_thick["r_i"], tv2_thick["t"], tv2_thick["sigma_y"])
+        res = analyze_vessel(
+            tv2_thick["P"], tv2_thick["r_i"], tv2_thick["t"], tv2_thick["sigma_y"]
+        )
 
     assert res.model == tv2_thick["expected_model"]
     assert pytest.approx(res.sigma_hoop, abs=TOLERANCE) == tv2_thick["sigma_hoop"]
@@ -38,7 +43,9 @@ def test_tv2_thick_wall(tv2_thick):
 
 def test_tv3_yielding(tv3_yield):
     """REQ-FUN-005: TV-3 yielded status verification."""
-    res = analyze_vessel(tv3_yield["P"], tv3_yield["r_i"], tv3_yield["t"], tv3_yield["sigma_y"])
+    res = analyze_vessel(
+        tv3_yield["P"], tv3_yield["r_i"], tv3_yield["t"], tv3_yield["sigma_y"]
+    )
     assert res.yielded is True
     assert pytest.approx(res.safety_factor, abs=TOLERANCE) == tv3_yield["safety_factor"]
 
@@ -49,7 +56,11 @@ def test_boundary_ratio_exact_10():
         warnings.simplefilter("always")
         res = analyze_vessel(2.0, 50.0, 5.0, 500.0)  # r_i / t = 10.0
         assert res.model == "thin_wall"
-        pv_warnings = [w for w in recorded_warnings if issubclass(w.category, PressureVesselWarning)]
+        pv_warnings = [
+            w
+            for w in recorded_warnings
+            if issubclass(w.category, PressureVesselWarning)
+        ]
         assert len(pv_warnings) == 0
 
 

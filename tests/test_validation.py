@@ -1,26 +1,24 @@
-import sys
-from pathlib import Path
+"""
+Unit tests for raw input validation rules (REQ-TYP and REQ-VAL series).
+"""
 
-# Add project root directory to sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import math
 import pytest
+
 from src.validation.inputs import validate_inputs
-"""
-Unit tests for raw input validation rules (REQ-TYP and REQ-VAL series).
-"""
 
 """
 Unit tests for raw input validation rules (REQ-TYP and REQ-VAL series).
 """
 
-
+"""
+Unit tests for raw input validation rules (REQ-TYP and REQ-VAL series).
+"""
 
 
 # ---------------------------------------------------------------------------
 # 1. Happy Path & Valid Type Handling
 # ---------------------------------------------------------------------------
+
 
 def test_validate_inputs_valid_floats():
     """Valid float values should return a tuple of floats without raising errors."""
@@ -39,6 +37,7 @@ def test_validate_inputs_integer_coercion():
 # 2. Type Rejection (REQ-TYP-002 through REQ-TYP-004)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("bad_value", [True, False])
 def test_validate_inputs_rejects_bool(bad_value):
     """REQ-TYP-002: Booleans must be rejected even though bool inherits from int."""
@@ -56,6 +55,7 @@ def test_validate_inputs_rejects_invalid_types(bad_type):
 # ---------------------------------------------------------------------------
 # 3. Finiteness & Positivity Guardrails (REQ-VAL-001 through REQ-VAL-005)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("non_finite", [float("nan"), float("inf"), float("-inf")])
 def test_validate_inputs_rejects_non_finite(non_finite):
@@ -83,6 +83,7 @@ def test_validate_inputs_rejects_non_positive(P, r_i, t, sigma_y, expected_match
 # ---------------------------------------------------------------------------
 # 4. Out of Range Guardrails & Message Ordering (REQ-VAL-006 & REQ-ERR-003)
 # ---------------------------------------------------------------------------
+
 
 def test_validate_inputs_out_of_range():
     """REQ-VAL-006: Exceeding maximum parameter range limits must raise ValueError."""
