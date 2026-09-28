@@ -22,7 +22,7 @@ jobs:
     - name: Install Project Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov matplotlib numpy
+        pip install pytest pytest-cov matplotlib numpy scipy pandas
 
     - name: Execute Pytest Suite with Coverage Check
       run: |
