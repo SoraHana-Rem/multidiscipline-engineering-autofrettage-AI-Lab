@@ -14,7 +14,21 @@ def generate_repo_summary(output_filename="PROJECT_CODE_DUMP.txt"):
         "build",
         "dist",
     }
-    target_extensions = {".py", ".md", ".ini", ".yaml", ".yml", ".json"}
+    target_extensions = {
+        ".py",
+        ".md",
+        ".ini",
+        ".yaml",
+        ".yml",
+        ".json",
+        ".m",
+        ".csv",
+        ".txt",
+        ".toml",
+        ".cfg",
+        ".ipynb",
+    }
+    target_names = {"Dockerfile", "Makefile", ".gitignore"}
 
     repo_root = Path.cwd()
 

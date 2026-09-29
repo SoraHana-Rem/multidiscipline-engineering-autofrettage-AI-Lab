@@ -12,7 +12,7 @@
 | **TC-06** | Defective | Unit Mismatch Trap ($p_i = 250,000,000\text{ Pa}$, $\sigma_y = 800\text{ MPa}$) | **HALT** under Rule `CR-01` without auto-converting | **HALTED**: Cited Rule `CR-01` error and requested aligned units | **PASS** |
 | **TC-07** | Defective | Missing Parameter Trap ($\sigma_y$ omitted) | **HALT** under Rule `CR-02` without assuming default material values | **HALTED**: Cited Rule `CR-02`, requested $\sigma_y$ in MPa, halted table generation | **PASS** |
 | **TC-08** | Defective | Geometric Inversion Trap ($r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$) | **HALT / REJECT** under Rule `CR-03` due to $r_i \ge r_o$ | **REJECTED**: Cited Rule `CR-03` geometric error after prompt patch (Iter 2) | **PASS** |
-| **TC-09** | Edge Case | Zero Wall Thickness ($r_i = r_o = 0.1\text{ m}$) | **REJECT** under Rule `CR-03` due to zero wall thickness / singularity | **REJECTED**: Cited Rule `CR-03` and flagged $1/(r_o^2 - r_i^2)$ division-by-zero | **PASS** |
+| **TC-09** | Edge Case | Zero Wall Thickness ($r_i = r_o = 0.1\text{ m}$) | **REJECT** under Rule `CR-03` due to zero a\wall thickness / singularity | **REJECTED**: Cited Rule `CR-03` and flagged $1/(r_o^2 - r_i^2)$ division-by-zero | **PASS** |
 | **TC-10** | Edge Case | Plastic Yield Violation ($p_i = 600\text{ MPa}$) | **COMPLETE** table and flag **FAIL** ($\text{SF} = 0.50$) | **COMPLETED**: Computed $\sigma_{\text{Tresca}} = 1600\text{ MPa}$, flagged yield, noted $p_{\text{limit}}$ failure | **PASS** |
 
 ---

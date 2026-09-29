@@ -45,7 +45,7 @@ def test_tv2_thick_wall():
     assert pytest.approx(res.sigma_radial, abs=1e-4) == tv2_thick["sigma_radial"]
     assert pytest.approx(res.sigma_vm, abs=1e-4) == tv2_thick["sigma_vm"]
     assert pytest.approx(res.safety_factor, abs=1e-4) == tv2_thick["safety_factor"]
-    assert res.yielded == tv2_thick["yielded"]
+    assert res.yielded == tv2_thick["yielded"]  
 
 
 def test_tv3_yielding(tv3_yield):
