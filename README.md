@@ -1,214 +1,647 @@
-# Pressure Vessel Stress & Autofrettage Analysis
+# AI-Assisted Pressure Vessel Engineering
 
-A Python module that calculates stresses, safety factor and yield status for internally pressurised cylindrical pressure vessels (thin-wall and thick-wall Lamé models), plus an autofrettage extension that estimates the residual stress benefit of plastic pre-expansion.
+A Python-based pressure vessel analysis project developed as part of a 16-week AI-assisted engineering learning programme.
 
-The project is deliberately built around **verification**: every result is backed by unit tests, published reference values, a hand-calculated MATLAB script, a genuine MATLAB-vs-Python cross-validation, and an LLM-reviewer benchmark. It was developed AI-first (see [How I used AI](#how-i-used-ai)), so the emphasis is on proving the code correct rather than assuming it.
+The project uses a pressure vessel engineering problem as the technical domain for exploring software engineering practices including requirements-driven development, AI-assisted implementation, automated testing, independent numerical validation, continuous integration, AI-agent evaluation, and evidence-based engineering review.
 
----
-
-## Contents
-
-1. [What it does](#what-it-does)
-2. [Quick start](#quick-start)
-3. [Example output](#example-output)
-4. [How it works](#how-it-works)
-5. [Verification and validation](#verification-and-validation)
-6. [Input limits and units](#input-limits-and-units)
-7. [Assumptions and limitations](#assumptions-and-limitations)
-8. [How I used AI](#how-i-used-ai)
-9. [Repository structure](#repository-structure)
-10. [Planned work](#planned-work)
-11. [License](#license)
+The objective is not only to produce working engineering calculations, but to explore how AI-generated or AI-assisted engineering work can be constrained, tested, independently validated, and reviewed.
 
 ---
 
-## What it does
+## Project Overview
 
-Given internal pressure **P**, inner radius **r_i**, wall thickness **t** and material yield strength **σ_y**, the module:
+The application performs pressure vessel stress analysis using thin-wall and thick-wall pressure vessel theory.
 
-- validates every input (type, finiteness, positivity, physical range) and rejects bad input instead of repairing it;
-- selects a **thin-wall** model (r_i / t >= 10) or the **Lamé thick-wall** model (r_i / t < 10, with a `PressureVesselWarning`);
-- computes hoop, longitudinal and radial stress, the **von Mises** equivalent stress, the **safety factor** and whether the vessel has **yielded**;
-- optionally runs an **autofrettage** analysis: plastic radius, residual hoop stress at the bore, and the enhanced safety factor under working pressure.
+The implementation includes:
 
-## Quick start
+- Thin-wall pressure vessel analysis
+- Thick-wall Lamé stress analysis
+- Automatic thin-wall / thick-wall model selection
+- Hoop, longitudinal, and radial stress calculation
+- von Mises equivalent stress
+- Yield assessment
+- Safety-factor calculation
+- Input validation and engineering warnings
+- Autofrettage analysis as an optional extension
+- Residual stress estimation following autofrettage
+- Automated Python testing
+- MATLAB cross-validation
+- AI engineering-review benchmark cases
+- CI-based automated testing
+- Requirements and design documentation
+- Engineering assumptions and references
+- Automated repository/file audit tooling
 
-Requires Python 3.10 or newer (developed on 3.14).
+The project is intentionally structured around both the engineering calculation and the process used to verify it.
 
-```bash
-git clone <your-repo-url>
-cd multidiscipline-engineering-autofrettage
+---
 
-python -m venv venv
-venv\Scripts\activate            # Windows (PowerShell)
-# source venv/bin/activate       # macOS / Linux
+# Engineering Approach
 
-pip install -r requirements.txt
+The project follows a simplified engineering lifecycle:
+
+```text
+Engineering Requirements
+        ↓
+Design & Assumptions
+        ↓
+Implementation
+        ↓
+Automated Tests
+        ↓
+Independent Numerical Validation
+        ↓
+AI-Assisted Engineering Review
+        ↓
+Evaluation Evidence
 ```
 
-Run an analysis (pressure in MPa, lengths in mm):
+This structure is intended to separate implementation from verification rather than relying on an AI-generated answer or a single calculation as evidence of correctness.
 
-```bash
-python -m src.main --pressure 50 --radius 50 --thickness 20 --yield-strength 250
+---
+
+# Requirements-Driven Development
+
+Engineering and software requirements are documented in:
+
+```text
+docs/requirements.md
 ```
 
-Add autofrettage and/or JSON output:
+Requirements use identifiers so that engineering intent can be traced into implementation and testing.
+
+The project currently includes requirements covering areas such as:
+
+- Input validation
+- Model selection
+- Thin-wall calculations
+- Thick-wall Lamé calculations
+- Failure assessment
+- Safety-factor calculation
+- Cross-validation
+- Testing
+- Engineering review
+
+Requirements traceability is currently being strengthened further so that documented traceability rules can also be automatically enforced by the test and CI pipeline.
+
+---
+
+# Pressure Vessel Models
+
+## Thin-Wall Model
+
+For vessels meeting the thin-wall geometry criterion, membrane stress equations are used.
+
+For internal pressure:
+
+### Hoop stress
+
+```text
+σh = Pr / t
+```
+
+### Longitudinal stress
+
+```text
+σl = Pr / 2t
+```
+
+where:
+
+- `P` = internal pressure
+- `r` = vessel radius
+- `t` = wall thickness
+
+---
+
+## Thick-Wall Model
+
+For thicker vessels, Lamé equations are used.
+
+The radial and hoop stress distributions are represented by:
+
+```text
+σr = A - B/r²
+```
+
+```text
+σθ = A + B/r²
+```
+
+with constants determined from the internal and external pressure boundary conditions.
+
+This allows the stress state to vary through the vessel wall rather than assuming a uniform membrane stress.
+
+---
+
+# Model Selection
+
+The application uses vessel geometry to determine whether the thin-wall or thick-wall model should be used.
+
+The radius-to-thickness ratio is evaluated during the analysis.
+
+Thin vessels use the membrane model while thicker vessels use the Lamé solution.
+
+Engineering warnings are produced where appropriate so that model assumptions remain visible to the user.
+
+---
+
+# Failure Assessment
+
+The calculated stress state is evaluated using the von Mises equivalent stress.
+
+The equivalent stress is compared with the supplied material yield strength.
+
+The application reports:
+
+- von Mises stress
+- yield strength
+- safety factor
+- whether yielding is predicted
+
+The safety factor is calculated from:
+
+```text
+Safety Factor = Yield Strength / von Mises Stress
+```
+
+---
+
+# Autofrettage Extension
+
+The project also includes an optional autofrettage analysis.
+
+Autofrettage is treated as an extension to the baseline elastic pressure-vessel model.
+
+The implementation:
+
+1. Determines initial yielding pressure.
+2. Determines the pressure associated with full-wall yielding.
+3. Validates the requested autofrettage pressure.
+4. Calculates the elastic-plastic loading state.
+5. Determines the plastic radius.
+6. Models elastic unloading.
+7. Calculates the resulting residual stress state.
+8. Superimposes the residual stress with the subsequent working-pressure stress state.
+9. Calculates an enhanced working safety factor.
+
+The plastic-radius solution uses numerical root finding.
+
+---
+
+# Example Analysis
+
+Example command:
+
+```bash
+python -m src.main -P 50 -r 50 -t 20 -sy 250
+```
+
+Example including autofrettage:
 
 ```bash
 python -m src.main -P 50 -r 50 -t 20 -sy 250 --autofrettage-pressure 80
-python -m src.main -P 50 -r 50 -t 20 -sy 250 --json
 ```
 
-Run the test suite (44 tests):
+For the autofrettage example above, the current implementation produces approximately:
+
+```text
+Model: lame_thick_wall
+
+Hoop Stress:          154.167 MPa
+Longitudinal Stress:   52.083 MPa
+Radial Stress:        -50.000 MPa
+
+von Mises Stress:     176.814 MPa
+Safety Factor:          1.414
+
+Plastic Radius:        53.699 mm
+Residual Hoop Stress
+at Bore:              -37.992 MPa
+
+Enhanced Safety
+Factor:                 1.722
+```
+
+These values are generated by the implementation and are covered by the project's verification activities.
+
+---
+
+# Installation
+
+## 1. Clone the Repository
 
 ```bash
-pytest -v
+git clone <repository-url>
+cd <repository-name>
 ```
 
-Regenerate the stress-profile plot and CSV:
+## 2. Create a Python Virtual Environment
+
+### Windows
 
 ```bash
-python python/analysis.py
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
-## Example output
+### macOS / Linux
 
-```text
-==================================================
-      PRESSURE VESSEL ANALYSIS SUMMARY
-==================================================
-  Model Selected     : lame_thick_wall
-  Hoop Stress        : 154.167 MPa
-  Longitudinal       : 52.083 MPa
-  Radial Stress      : -50.0 MPa
-  Von Mises Stress   : 176.814 MPa
-  Safety Factor      : 1.414
-  Yield Status       : SAFE (Elastic)
---------------------------------------------------
-      AUTOFRETTAGE CAPSTONE SUMMARY
---------------------------------------------------
-  Autofrettage Press : 80.0 MPa
-  Plastic Radius r_p : 53.699 mm
-  Residual Hoop Bore : -37.992 MPa
-  Enhanced SF        : 1.722
-==================================================
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-In this example the autofrettage step leaves a compressive residual hoop stress at the bore, raising the bore safety factor from 1.41 to 1.72.
+## 3. Install Dependencies
 
-Lamé stress profile for a thick-walled cylinder (r_i = 100 mm, r_o = 200 mm, P = 100 MPa). Radial stress runs from -100 MPa at the bore to 0 at the outer wall; hoop stress peaks at the bore:
-
-![Lamé stress profile](output/plots/lame_stress_profile.png)
-
-## How it works
-
-The code is layered with one-way dependencies:
-
-```text
-tests -> main -> analysis -> validation -> config
-                    |
-                    +-> physics -> config
+```bash
+pip install -r requirements.txt
 ```
 
-| Layer | Path | Responsibility |
-| :--- | :--- | :--- |
-| Config | `src/config/limits.py` | Single source of truth for input limits, the thin/thick threshold and numerical tolerances |
-| Validation | `src/validation/inputs.py` | Ordered checks: type, finiteness, positivity, range. Rejects `bool`, `NaN`, `inf`, strings and arrays |
-| Physics | `src/physics/` | Pure functions: thin wall, Lamé thick wall, von Mises, safety factor, autofrettage |
-| Orchestrator | `src/analysis.py` | Validates, selects the model, runs the physics, returns a frozen `VesselResult` |
-| CLI | `src/main.py` | Argument parsing and formatted or JSON output |
-
-Design decisions worth knowing:
-
-- **Fail fast, never repair.** Invalid input raises an error. It is never clamped, coerced or defaulted.
-- **`bool` is rejected explicitly** because Python treats `True` as the number 1.
-- **Yielding is a result, not an error.** `yielded=True` is returned normally.
-- **Autofrettage checks its applicability window first** (between initial-yield and full-yield pressure) before calling the numerical root-finder.
-
-Full detail: [`docs/design.md`](docs/design.md), [`docs/requirements.md`](docs/requirements.md), [`docs/assumptions.md`](docs/assumptions.md).
-
-## Verification and validation
-
-| Layer of evidence | What it shows | Where |
-| :--- | :--- | :--- |
-| Unit and integration tests | 44 pytest tests: validation rules and ordering, physics, model selection at the r_i / t = 10 boundary, autofrettage, CLI | `tests/` |
-| Reference test vectors | Thin-wall (TV-1), thick-wall (TV-2) and yielding (TV-3) cases matched within 1e-4 | `tests/conftest.py`, `tests/test_analysis.py` |
-| Boundary conditions | Radial stress equals -P at the bore and 0 at the outer wall; hoop stress peaks at the bore | `tests/test_physics.py`, `python/analysis.py` (self-checks) |
-| Hand-calculation script | MATLAB Lamé baseline with equilibrium, force-balance and hand-calc checks | `matlab/lame_stress_analysis.m` |
-| MATLAB vs Python cross-validation | Independent engines agree; max relative error 1.7e-14 (tolerance 1e-5) | `src/validation/cross_validate.py`, [report](src/validation/matlab-python-comparison.md) |
-| LLM reviewer benchmark | 10-case benchmark of a guardrailed review prompt; 10/10 after one prompt fix | [`evaluation/evaluation-report.md`](evaluation/evaluation-report.md) |
-
-## Input limits and units
-
-The module uses **millimetres for lengths and MPa for pressure and yield strength**. The MATLAB comparison and `python/lame_stress.py` use SI (m, Pa) and are documented as such.
-
-| Input | Symbol | Allowed range | Unit |
-| :--- | :--- | :--- | :--- |
-| Pressure | P | > 0 to 100 | MPa |
-| Inner radius | r_i | 1 to 5000 | mm |
-| Wall thickness | t | 0.05 to 500 | mm |
-| Yield strength | σ_y | 10 to 3000 | MPa |
-
-Out-of-range values raise an error rather than being adjusted. This also catches unit slips such as entering pascals instead of MPa.
-
-## Assumptions and limitations
-
-Results are valid only within these assumptions (full register in [`docs/assumptions.md`](docs/assumptions.md)):
-
-- isotropic, homogeneous, linear-elastic, ductile material (von Mises yield criterion);
-- static internal pressure only, zero external pressure, closed ends, section far from end caps;
-- no fatigue, thermal loads, welds, nozzles or corrosion allowance;
-- thick-wall stresses evaluated at the inner surface, where they peak;
-- autofrettage assumes an elastic-perfectly-plastic material, von Mises yielding and purely elastic unloading (no Bauschinger effect).
-
-This is an educational and portfolio project. It is **not** a substitute for a certified design code or professional engineering review.
-
-## How I used AI
-
-I am learning Python, and this project was built **AI-first**: AI assistants (Claude and GitHub Copilot) generated most of the code, and I directed the engineering and verified the results. Because I could not rely on reading every line with a Python expert's eye, I built layers of evidence that do not depend on trusting the AI:
-
-- a written requirements, design and assumptions set that the AI had to follow, including rules against changing physics formulas or relaxing limits;
-- reference values and boundary conditions checked independently, by hand and in MATLAB;
-- a test suite that pins down behaviour, including deliberately hostile inputs;
-- a guardrailed reviewer prompt, benchmarked on good and defective cases.
-
-The review process found real problems, which I fixed:
-
-- a **sign error in the plotting script** that swapped the hoop and radial stress curves, caught by checking the boundary condition against the MATLAB baseline;
-- a **cross-validation that was not independent**, because the "MATLAB" reference file had been generated in Python; it was replaced with data produced by real MATLAB;
-- a **placeholder test that could never fail**, replaced with real assertions;
-- leftover patch code (name-guessing imports, a duplicate function signature) removed in a cleanup pass.
-
-The lesson I took from this: passing tests show the code does what the tests say, so the tests themselves and the reference data need scrutiny too.
-
-## Repository structure
+Project dependencies are defined in:
 
 ```text
-multidiscipline-engineering-autofrettage/
-├── src/                  # module: main.py, analysis.py, errors.py, config/, validation/, physics/
-├── tests/                # pytest suite (44 tests)
-├── python/               # standalone Lamé solver and plotting script
-├── matlab/               # MATLAB hand-calc baseline and reference-data export
-├── docs/                 # requirements, design, assumptions, checklists, prompt template
-├── evaluation/           # LLM reviewer benchmark and report
-├── prompts/              # prompt-engineering lab notes
-├── agents/               # workspace audit scripts
-├── output/               # generated CSV and plots
-├── requirements.txt
+requirements.txt
+```
+
+---
+
+# Running the Application
+
+Basic analysis:
+
+```bash
+python -m src.main -P 10 -r 100 -t 10 -sy 250
+```
+
+Autofrettage analysis:
+
+```bash
+python -m src.main -P 50 -r 50 -t 20 -sy 250 --autofrettage-pressure 80
+```
+
+---
+
+# Automated Testing
+
+The automated test suite is executed using `pytest`.
+
+Run:
+
+```bash
+python -m pytest -q
+```
+
+At the current verified project state:
+
+```text
+44 tests passed
+```
+
+Coverage can be measured using:
+
+```bash
+python -m pytest --cov=src --cov-report=term-missing
+```
+
+Current measured total source-code coverage:
+
+```text
+94%
+```
+
+Coverage is used as one engineering quality signal rather than as proof of numerical correctness on its own.
+
+---
+
+# MATLAB Cross-Validation
+
+An independent MATLAB implementation is included to provide numerical cross-validation of the thick-wall Lamé calculations.
+
+MATLAB files are located under:
+
+```text
+matlab/
+```
+
+Reference data generated from the MATLAB implementation is stored in:
+
+```text
+src/validation/matlab_reference.csv
+```
+
+The Python validation can be run using:
+
+```bash
+python -m src.validation.cross_validate
+```
+
+At the current verified project state, the comparison reports:
+
+```text
+Validation Status : PASS
+Max Relative Error: approximately 1.7e-14
+```
+
+The intention of this validation is to provide a numerical reference independent of the main Python calculation path.
+
+---
+
+# AI-Assisted Engineering Review
+
+The project also explores the use of AI as an engineering reviewer rather than treating AI output as automatically correct.
+
+The review process is supported by:
+
+```text
+docs/engineering-prompt-template.md
+```
+
+and evaluated using benchmark cases documented in:
+
+```text
+evaluation/benchmark_cases.md
+```
+
+The benchmark currently contains 10 engineering review cases.
+
+Current benchmark result:
+
+```text
+10 / 10 PASS
+```
+
+Importantly, the benchmark was developed iteratively.
+
+An earlier evaluation exposed incorrect AI behaviour in one of the test cases. The review instructions were then modified and the case was rerun.
+
+The failure and subsequent correction are retained in the evaluation evidence rather than being removed from the project history.
+
+This demonstrates the intended development pattern:
+
+```text
+Prompt
+   ↓
+Evaluation
+   ↓
+Failure Identified
+   ↓
+Prompt / Control Updated
+   ↓
+Re-evaluation
+```
+
+The benchmark should therefore be interpreted as evidence against the defined test cases, not as proof that an AI reviewer will always produce a correct engineering judgement.
+
+---
+
+# What the AI-Assisted Process Uncovered
+
+This project was developed using AI assistance, including AI-generated and AI-assisted code.
+
+Rather than assuming generated code was correct, the project progressively introduced independent checks designed to challenge both the implementation and the evidence being used to support it.
+
+That process identified several genuine issues during development.
+
+### Plotting error
+
+A sign-related error in the plotting workflow resulted in the hoop and radial stress curves being represented incorrectly.
+
+The issue was identified by comparing the plotted behaviour with the expected Lamé boundary conditions and MATLAB reference calculations.
+
+### Non-independent validation data
+
+An early version of the MATLAB/Python cross-validation process used reference data that had been generated through the Python workflow.
+
+Although the numerical comparison passed, this did not constitute genuine independent validation.
+
+The validation process was changed so that the reference dataset was produced independently using MATLAB.
+
+### Placeholder automated test
+
+A test was identified that could not meaningfully fail because it did not contain sufficient behavioural assertions.
+
+It was replaced with executable assertions against expected engineering behaviour.
+
+### Residual development code
+
+A later review identified temporary compatibility and patch logic left over from earlier development, including import/name handling and duplicate implementation artefacts.
+
+These were removed during repository cleanup.
+
+These findings reinforced an important lesson from the project:
+
+```text
+Passing tests do not automatically prove that software is correct.
+
+Tests, reference data, validation methods,
+and the evidence itself must also be reviewed.
+```
+
+This is one of the main reasons the project increasingly focuses on independent evidence, traceability, and deterministic engineering controls around AI-generated work.
+
+---
+
+# Repository Audit
+
+The project contains an automated file/repository audit utility:
+
+```text
+agents/file_audit_agent.py
+```
+
+The audit checks selected repository and documentation conditions and produces structured audit results.
+
+An audit document can also be generated using:
+
+```text
+agents/generate_audit_doc.py
+```
+
+This is an experimental governance mechanism and is being developed further so that overall audit status is derived directly from individual control results and can be used as a reliable automated quality gate.
+
+---
+
+# Continuous Integration
+
+GitHub Actions configuration is located under:
+
+```text
+.github/workflows/
+```
+
+The CI workflow installs the project dependencies and executes the automated test suite and coverage measurement.
+
+This provides repeatable verification when changes are committed to the repository.
+
+Future iterations will strengthen CI from reporting quality signals to enforcing selected engineering quality gates.
+
+---
+
+# Simplified Repository Structure
+
+The structure below shows the main components used by the engineering application and verification workflow. It is intentionally simplified and does not list every learning, experimental, or generated file in the repository.
+
+```text
+.
+├── .github/
+│   └── workflows/
+│
+├── agents/
+│   ├── file_audit_agent.py
+│   └── generate_audit_doc.py
+│
+├── docs/
+│   ├── requirements.md
+│   ├── design.md
+│   ├── assumptions.md
+│   ├── reference.md
+│   ├── engineering-prompt-template.md
+│   └── ...
+│
+├── evaluation/
+│   ├── agent-evaluation.md
+│   ├── benchmark_cases.md
+│   └── pytest_execution_log.txt
+│
+├── matlab/
+│   ├── lame_stress_analysis.m
+│   └── export_reference_data.m
+│
+├── output/
+│   ├── lame_stress_profile.csv
+│   └── plots/
+│
+├── src/
+│   ├── config/
+│   ├── physics/
+│   ├── validation/
+│   ├── visualization/
+│   ├── analysis.py
+│   ├── errors.py
+│   └── main.py
+│
+├── tests/
+│   └── ...
+│
+├── LICENSE
 ├── pytest.ini
-└── LICENSE
+├── requirements.txt
+└── README.md
 ```
 
-## Planned work
+Additional folders contain learning exercises, prompts, exploratory scripts, and development artefacts created during the 16-week programme.
 
-- Continuous integration (GitHub Actions running the test suite on every push)
-- Agent evaluation: injecting known flaws into the code and measuring what the AI reviewer catches
-- Wrapping the analysis as a small cloud API (Azure Functions)
+---
 
-## License
+# Verification Summary
 
-MIT. See [LICENSE](LICENSE).
+At the current verified project state:
 
-**Author:** Finley Parker. [GitHub] https://github.com/SoraHana-Rem/multidiscipline-engineering-autofrettage-AI-Lab
+| Verification | Result |
+|---|---|
+| Automated Python tests | 44 passed |
+| Measured source coverage | 94% |
+| MATLAB cross-validation | PASS |
+| Maximum MATLAB/Python relative error | ~1.7e-14 |
+| AI engineering-review benchmark | 10/10 PASS |
+| Autofrettage example | Reproduced successfully |
 
- | [LinkedIn]https://www.linkedin.com/in/finley-parker-ba090b221/
+These results represent the current test and evaluation evidence for the repository.
+
+They should not be interpreted as certification of the software for safety-critical engineering use.
+
+---
+
+# Current Limitations
+
+The project is a learning and engineering-development project rather than certified pressure-vessel design software.
+
+Current limitations include:
+
+- The implemented physics represents a defined subset of pressure-vessel behaviour.
+- Material behaviour is simplified.
+- The software is not a replacement for applicable engineering codes or standards.
+- The AI engineering reviewer is evaluated against a bounded benchmark rather than assumed to be generally reliable.
+- Requirements-to-test traceability exists but is not yet fully machine-enforced.
+- CI currently measures coverage but does not yet enforce a minimum coverage threshold.
+- Autofrettage is implemented as a separate extension to the baseline elastic analysis.
+
+These limitations are intentionally documented so that future development can focus on measurable engineering improvements.
+
+---
+
+# Development Roadmap
+
+The next stage of the project focuses on strengthening the engineering lifecycle rather than simply adding more pressure-vessel calculations.
+
+Planned areas include:
+
+1. Machine-enforced requirements-to-test traceability.
+2. Stronger independent validation gates.
+3. Executable repository governance.
+4. Improved AI-agent evaluation.
+5. Evidence and provenance generation.
+6. CI quality gates.
+7. Engineering workflow observability.
+
+The longer-term objective is to explore a development model where:
+
+```text
+AI proposes
+     ↓
+Deterministic engineering controls verify
+     ↓
+Independent evidence validates
+     ↓
+Governance determines acceptance
+```
+
+Once these lifecycle controls are strengthened, potential engineering extensions include fracture mechanics, fatigue crack-growth analysis, and further pressure-vessel modelling.
+
+---
+
+# Learning Objectives
+
+This project forms part of a 16-week AI-assisted engineering learning programme.
+
+The main learning objectives include:
+
+- Python engineering development
+- Requirements-driven development
+- AI-assisted coding
+- Prompt engineering
+- AI evaluation
+- Automated testing
+- Independent numerical validation
+- CI/CD
+- Engineering governance
+- Requirements traceability
+- Evidence-based engineering
+- Agentic software-development concepts
+
+The pressure-vessel problem provides a domain where incorrect outputs can be identified numerically, making it useful for exploring how AI-assisted engineering should be verified rather than simply trusted.
+
+---
+
+# Disclaimer
+
+This repository is an educational and development project.
+
+It has not been certified or validated for the design, manufacture, inspection, or operation of real pressure vessels.
+
+Engineering decisions involving pressure equipment must use the applicable engineering standards, verified material data, appropriate analysis methods, and suitably qualified engineering judgement.
+
+---
+
+# License
+
+This project is licensed under the MIT License.
+
+See:
+
+```text
+LICENSE
+```
+
+for details.

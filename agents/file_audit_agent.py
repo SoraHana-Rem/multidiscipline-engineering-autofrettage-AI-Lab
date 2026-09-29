@@ -1,4 +1,3 @@
-import os
 import json
 import pathlib
 from typing import Dict, List, Any
@@ -19,29 +18,51 @@ def inspect_file_contents(file_path: pathlib.Path) -> str:
     except Exception as e:
         return f"[ERROR READING FILE]: {str(e)}"
 
+
+class AuditResults:
+    """Collect audit checks and derive a JSON-serializable overall result."""
+
+    def __init__(self) -> None:
+        self.status = "PASS"
+        self.checks: List[Dict[str, str]] = []
+        self.evidence: Dict[str, Any] = {}
+
+    def add_check(self, rule: str, status: str, details: str) -> None:
+        """Add a check and immediately refresh the aggregate status."""
+        self.checks.append({"rule": rule, "status": status, "details": details})
+        self.finalize()
+
+    def finalize(self) -> str:
+        """Set and return FAIL, QUERY, or PASS based on recorded checks."""
+        statuses = {check["status"] for check in self.checks}
+        self.status = (
+            "FAIL" if "FAIL" in statuses
+            else "QUERY" if "QUERY" in statuses
+            else "PASS"
+        )
+        return self.status
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the complete report in the format used by this agent."""
+        self.finalize()
+        return {
+            "status": self.status,
+            "checks": self.checks,
+            "evidence": self.evidence,
+        }
+
+
 def run_workspace_audit() -> Dict[str, Any]:
     """Scans key workspace files and checks structural requirements."""
-    audit_results = {
-        "status": "PASS",
-        "checks": [],
-        "evidence": {}
-    }
+    results = AuditResults()
 
     # Check 1: Traceability in requirements.md
     req_path = DOCS_DIR / "requirements.md"
     req_content = inspect_file_contents(req_path)
     if "CR-01" in req_content or "Lamé" in req_content or "autofrettage" in req_content.lower():
-        audit_results["checks"].append({
-            "rule": "DOC-TRACEABILITY", 
-            "status": "PASS", 
-            "details": "requirements.md contains physical domain models."
-        })
+        results.add_check("DOC-TRACEABILITY", "PASS", "requirements.md contains physical domain models.")
     else:
-        audit_results["checks"].append({
-            "rule": "DOC-TRACEABILITY", 
-            "status": "QUERY", 
-            "details": "requirements.md missing expected references."
-        })
+        results.add_check("DOC-TRACEABILITY", "QUERY", "requirements.md missing expected references.")
 
     # Read all relevant source files including physics modules
     inputs_path = SRC_DIR / "validation" / "inputs.py"
@@ -60,33 +81,17 @@ def run_workspace_audit() -> Dict[str, Any]:
     
     # Check 2: Type Safety
     if "isinstance(" in combined_src_content and "bool" in combined_src_content:
-        audit_results["checks"].append({
-            "rule": "TYPE-GUARD-BOOL", 
-            "status": "PASS", 
-            "details": "Explicit boolean rejection detected in input validation."
-        })
+        results.add_check("TYPE-GUARD-BOOL", "PASS", "Explicit boolean rejection detected in input validation.")
     else:
-        audit_results["checks"].append({
-            "rule": "TYPE-GUARD-BOOL", 
-            "status": "FAIL", 
-            "details": "No explicit boolean check (isinstance(..., bool)) found in src/."
-        })
+        results.add_check("TYPE-GUARD-BOOL", "FAIL", "No explicit boolean check (isinstance(..., bool)) found in src/.")
 
     # Check 3: Zero boundary stress guard / relative error tolerance
     if any(token in combined_src_content for token in ["1e-12", "1e-9", "ZeroDivisionError", "float('inf')"]):
-        audit_results["checks"].append({
-            "rule": "NUMERICAL-GUARD-DIV0", 
-            "status": "PASS", 
-            "details": "Numerical edge case or zero-division tolerance guard detected in physics/validation."
-        })
+        results.add_check("NUMERICAL-GUARD-DIV0", "PASS", "Numerical edge case or zero-division tolerance guard detected in physics/validation.")
     else:
-        audit_results["checks"].append({
-            "rule": "NUMERICAL-GUARD-DIV0", 
-            "status": "QUERY", 
-            "details": "Verify zero-division logic in physics models."
-        })
+        results.add_check("NUMERICAL-GUARD-DIV0", "QUERY", "Verify zero-division logic in physics models.")
 
-    return audit_results
+    return results.to_dict()
 
 if __name__ == "__main__":
     results = run_workspace_audit()
