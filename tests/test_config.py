@@ -6,4 +6,6 @@ from src.config import limits
 
 
 def test_limits_exist():
-    assert hasattr(limits, "MIN_PRESSURE") or hasattr(limits, "PRESSURE_MIN") or True
+    assert hasattr(limits, "PRESSURE_MIN")
+    assert hasattr(limits, "PRESSURE_MAX")
+    assert hasattr(limits, "THIN_WALL_RATIO_THRESHOLD")
