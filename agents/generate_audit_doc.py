@@ -8,8 +8,7 @@ def generate_markdown_report():
     audit_data = run_workspace_audit()
     docs_dir = WORKSPACE_ROOT / "docs"
     docs_dir.mkdir(exist_ok=True)
-    report_path = docs_dir / "Week_14_audit.md"
-
+    report_path = docs_dir / "week-14-audit.md"
     md_content = f"""# Automated Workspace Quality Audit Report
 
 **Date Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}  
