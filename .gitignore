@@ -1,2 +1,10 @@
 __pycache__/
 */__pycache__/
+
+.coverage
+.pytest_cache/
+htmlcov/
+output/
+outputs/
+.venv/
+venv/
