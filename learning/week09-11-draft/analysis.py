@@ -29,7 +29,7 @@ df = pd.DataFrame({
 })
 
 # Ensure output directory exists relative to repository root
-project_root = Path(__file__).resolve().parent.parent
+project_root = Path(__file__).resolve().parents[2]
 output_dir = project_root / "output"
 plots_dir = output_dir / "plots"
 
