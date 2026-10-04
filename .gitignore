@@ -8,3 +8,6 @@ output/
 outputs/
 .venv/
 venv/
+
+PROJECT_CODE_DUMP.txt
+dump_repo.py
