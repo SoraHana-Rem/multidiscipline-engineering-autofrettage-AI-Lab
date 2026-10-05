@@ -27,15 +27,15 @@
 # Test Log
 * **FLT-01 (Unit Mismatch Fault):** PASS
   * **Payload:** $p_i = 250,000,000\text{ Pa}$, $\sigma_y = 800\text{ MPa}$.
-  * **Observed Behavior:** Execution halted under Rule `CR-01`. Error flagged for mixed pressure units[cite: 7].
+  * **Observed Behavior:** Execution halted under Rule `CR-01`. Error flagged for mixed pressure units.
 
 * **FLT-02 (Missing Variable Fault):** PASS
   * **Payload:** Omitted `<sig_y>` parameter from material properties.
-  * **Observed Behavior:** Execution halted under Rule `CR-02`. Model refused to assume default material properties and requested explicit yield strength[cite: 7].
+  * **Observed Behavior:** Execution halted under Rule `CR-02`. Model refused to assume default material properties and requested explicit yield strength.
 
   * **FLT-03 (Geometric Inversion Fault):** PASS
-  * **Payload:** $r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$[cite: 7].
-  * **Observed Behavior:** Execution halted under Rule `CR-03`. Flagged geometric inversion error ($r_i \ge r_o$) and requested corrected dimensions[cite: 7].
+  * **Payload:** $r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$.
+  * **Observed Behavior:** Execution halted under Rule `CR-03`. Flagged geometric inversion error ($r_i \ge r_o$) and requested corrected dimensions.
 
   ## Week 4 Execution Log: MATLAB Lamé Stress Analysis Verification
 
