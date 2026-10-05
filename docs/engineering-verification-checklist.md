@@ -40,7 +40,7 @@
   ## Week 4 Execution Log: MATLAB Lamé Stress Analysis Verification
 
 - **Script Executed:** `matlab/lame_stress_analysis.m`
-- **Execution Date:** 2026-09-19
+- **Execution Date:** 2026-10-05 (re-run on MATLAB R2026b after fixing a syntax error on line 65, `idx[j]` to `idx(j)`; script commit `86ff64b`; raw output in `evaluation/matlab-lame-run-log.txt`). The earlier 2026-09-19 entry could not be reproduced from the committed script; the results below are identical to it.
 - **Model Type:** Closed-end, linear-elastic, isotropic, axisymmetric thick-walled cylinder
 - **Baseline Geometry & Parameters:**
   - Inner Radius ($r_i$): $0.050\text{ m}$ ($50\text{ mm}$)

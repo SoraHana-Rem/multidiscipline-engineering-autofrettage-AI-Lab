@@ -1,0 +1,23 @@
+MATLAB 26.2 (R2026b)
+Run date: 2026-10-05 06:45
+A = 33.3333 MPa, B = 3.3333e+05 Pa*m^2, sigma_z = 33.3333 MPa
+
+Location       sig_r[MPa] sig_t[MPa] sig_z[MPa]    u_r[um]    vM[MPa]     Tresca
+r_i              -100.000    166.667     33.333     46.667    230.940    266.667
+r_o                 0.000     66.667     33.333     28.333     57.735     66.667
+
+Check                                        Rel. error        Tol  Result
+BC sigma_r(r_i) = -p_i                        0.000e+00    1.0e-09  PASS
+BC sigma_r(r_o) = -p_o                        3.725e-17    1.0e-09  PASS
+Equilibrium residual                          7.990e-07    1.0e-05  PASS
+Hoop force balance                            4.861e-08    1.0e-06  PASS
+Hand vs code: sigma_theta @ r_i               2.000e-06    1.0e-04  PASS
+Hand vs code: sigma_z @ r_i                   1.000e-05    1.0e-04  PASS
+Hand vs code: u_r [um] @ r_i                  7.143e-06    1.0e-04  PASS
+Hand vs code: von Mises @ r_i                 4.663e-07    1.0e-04  PASS
+Hand vs code: sigma_theta @ r_o               5.000e-06    1.0e-04  PASS
+Hand vs code: sigma_z @ r_o                   1.000e-05    1.0e-04  PASS
+Hand vs code: u_r [um] @ r_o                  1.176e-05    1.0e-04  PASS
+Hand vs code: von Mises @ r_o                 4.663e-07    1.0e-04  PASS
+
+OVERALL: ALL CHECKS PASSED
