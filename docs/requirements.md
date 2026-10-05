@@ -107,6 +107,20 @@ Autofrettage is a separate, optional extension layered on top of the baseline mo
 | REQ-AUT-003 | The module computes the residual hoop stress at the bore after elastic unload from $P_{auto}$ (purely elastic unloading assumed; no Bauschinger effect, see `docs/assumptions.md` A-AUT-03). |
 | REQ-AUT-004 | Given a working pressure $P_{working}$, the module reports an enhanced safety factor combining the baseline elastic stress state with the residual autofrettage stress. |
 
+
+Autofrettage input contract:
+
+    Pressure, radii and yield strength accept real numeric scalars;
+    booleans and strings are rejected.
+    Supplied scalar values must be finite and positive.
+    The outer radius must exceed the inner radius.
+    Autofrettage pressure must be strictly above initial yield and
+    strictly below full yield.
+    Profile point count must be an integer of at least two.
+    When supplied, working pressure must be finite and positive.
+    When working pressure is omitted, residual stresses are calculated
+    and safety_factor is None, meaning not calculated.
+
 ## 4. Performance & Precision Acceptance Criteria
 
 ### 4.1 Numerical precision
