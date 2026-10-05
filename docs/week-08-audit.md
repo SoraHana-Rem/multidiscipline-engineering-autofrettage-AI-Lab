@@ -32,6 +32,8 @@ pytest -v
 Output logs 
 
 ============================== test session starts ==============================
+> **Note (added during Phase 1 cleanup):** the console excerpt below is an abbreviated illustration, not a verbatim captured log. The Python version is masked (`3.14.x`). It reflects the suite as of Week 8 (30 tests). The current suite has 44 tests; its captured log is `evaluation/pytest_execution_log.txt`.
+
 platform win32 -- Python 3.14.x, pytest-9.1.1
 rootdir: C:\Aerospace AI\multidiscipline-engineering-autofrettage
 collected 30 items
