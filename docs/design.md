@@ -63,7 +63,12 @@ multidiscipline-engineering-autofrettage/
 | CLI | `src/main.py` | Parses arguments, calls orchestrator and autofrettage, prints results. | analysis, physics.autofrettage | contain equations |
 | Tests | `tests/` | Verify every requirement. | everything under `src/` | be imported by `src/` |
 
-**Revision note:** an earlier draft said the physics core may import only `math`. That is superseded by rule AI-10 (`docs/assumptions.md`): tolerances such as `STRESS_ZERO_TOLERANCE` live in `src/config/limits.py`, so physics may read them from there.
+**Numerical policy:** the failure helpers use exact-zero handling
+rather than a configurable near-zero stress cutoff. Public failure
+helpers validate real scalar types and finiteness; `safety_factor`
+also checks strength and equivalent-stress signs. Non-finite computed
+results raise `ArithmeticError`. Input bounds and the model-selection
+threshold remain in `src/config/limits.py`.
 
 Dependency rule (one-way):
 
@@ -181,7 +186,12 @@ def run_pipeline(P, r_i, t, sigma_y, P_auto=None, json_output: bool = False) -> 
 
 ## 6. Error Handling Strategy
 
-* **Validate at the boundary only.** Physics functions trust callers and do not re-validate raw inputs (the `bool` guards in `failure.py` are the one deliberate exception).
+**Numerical policy:** the failure helpers use exact-zero handling
+rather than a configurable near-zero stress cutoff. Public failure
+helpers validate real scalar types and finiteness; `safety_factor`
+also checks strength and equivalent-stress signs. Non-finite computed
+results raise `ArithmeticError`. Input bounds and the model-selection
+threshold remain in `src/config/limits.py`.
 * **No swallowing inside the module.** Only the outermost CLI (`main.run_pipeline`) catches `ValueError`, `TypeError` and `ArithmeticError`, to print a clean message and exit with status 1.
 * **Ordered checks.** Type → Finiteness → Positivity → Range. Parameters are evaluated in the order P, r_i, t, sigma_y.
 * **Exception types.** `TypeError` (bad type), `ValueError` (bad value), `ValidationError` (a `ValueError` subclass for range and autofrettage-applicability failures), `ZeroDivisionError` and `ArithmeticError` (zero or non-finite stress).

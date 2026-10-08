@@ -1,51 +1,91 @@
-"""Failure criteria and yield safety-factor calculations."""
+"""Validated failure criteria and yield safety-factor calculations."""
 
 import math
+from numbers import Real
 
 
-def safety_factor(
-    sigma_y: float,
-    sigma_vm: float,
-    eps: float = 1e-12,
-) -> float:
-    """
-    REQ-FUN-004, REQ-FUN-005: Calculate yield strength / equivalent stress.
-
-    Supported calls:
-        safety_factor(500.0, 200.0)
-        safety_factor(sigma_y=500.0, sigma_vm=200.0)
-
-    Equivalent stress must not be negative, zero or near zero.
-    """
-    if isinstance(sigma_y, bool) or isinstance(sigma_vm, bool):
+def _finite_real(name, value):
+    """REQ-TYP-001..004, REQ-VAL-001: Require a finite real scalar."""
+    if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(
-            "Inputs must be numeric floats or ints, not booleans."
+            f"{name} must be a real numeric scalar: "
+            f"got {value!r} MPa"
         )
 
-    sy_val = float(sigma_y)
-    seq_val = float(sigma_vm)
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(
+            f"{name} must be finite and representable: "
+            f"got {value!r} MPa"
+        ) from exc
 
-    if seq_val < 0:
-        raise ValueError("Equivalent stress cannot be negative.")
+    if not math.isfinite(number):
+        raise ValueError(
+            f"{name} must be finite: got {value!r} MPa"
+        )
 
-    if abs(seq_val) < eps:
+    return number
+
+
+def _finite_result(value):
+    """REQ-ERR-005: Reject non-finite calculated results."""
+    if not math.isfinite(value):
+        raise ArithmeticError(
+            "Non-finite numerical result encountered during computation."
+        )
+
+    return value
+
+
+def safety_factor(sigma_y: float, sigma_vm: float) -> float:
+    """
+    REQ-FUN-004: Calculate yield strength / equivalent stress.
+
+    Yield strength must be finite and positive.
+    Equivalent stress must be finite and non-negative.
+
+    Exactly zero stress raises ZeroDivisionError.
+    Tiny positive stresses are accepted when the resulting SF is finite.
+    No near-zero cutoff is applied.
+    """
+    sy = _finite_real("sigma_y", sigma_y)
+    seq = _finite_real("sigma_vm", sigma_vm)
+
+    if sy <= 0:
+        raise ValueError(
+            f"sigma_y must be positive: got {sy} MPa"
+        )
+
+    if seq < 0:
+        raise ValueError(
+            f"sigma_vm cannot be negative: got {seq} MPa"
+        )
+
+    if seq == 0:
         raise ZeroDivisionError(
-            "Equivalent stress cannot be zero or near zero."
+            "Equivalent stress cannot be zero."
         )
 
-    return float(sy_val / seq_val)
+    return _finite_result(sy / seq)
 
 
 def von_mises_plane(sigma_1: float, sigma_2: float) -> float:
-    """REQ-FUN-004: Calculate plane-stress von Mises equivalent stress."""
-    if isinstance(sigma_1, bool) or isinstance(sigma_2, bool):
-        raise TypeError(
-            "Inputs must be numeric floats or ints, not booleans."
-        )
+    """
+    REQ-FUN-004: Evaluate plane-stress von Mises using a stable norm.
 
-    return math.sqrt(
-        sigma_1**2 - sigma_1 * sigma_2 + sigma_2**2
+    Algebraically equivalent to sqrt(s1² - s1*s2 + s2²).
+    Signed stress components are supported.
+    """
+    s1 = _finite_real("sigma_1", sigma_1)
+    s2 = _finite_real("sigma_2", sigma_2)
+
+    result = math.hypot(
+        s1 - 0.5 * s2,
+        (math.sqrt(3) / 2) * s2,
     )
+
+    return _finite_result(result)
 
 
 def von_mises_triaxial(
@@ -53,18 +93,20 @@ def von_mises_triaxial(
     sigma_2: float,
     sigma_3: float,
 ) -> float:
-    """REQ-FUN-004: Calculate triaxial von Mises equivalent stress."""
-    if any(isinstance(value, bool) for value in (
-        sigma_1, sigma_2, sigma_3
-    )):
-        raise TypeError(
-            "Inputs must be numeric floats or ints, not booleans."
-        )
+    """
+    REQ-FUN-004: Evaluate triaxial von Mises using a stable norm.
 
-    return math.sqrt(
-        0.5 * (
-            (sigma_1 - sigma_2) ** 2
-            + (sigma_2 - sigma_3) ** 2
-            + (sigma_3 - sigma_1) ** 2
-        )
-    )
+    Algebraically equivalent to the existing principal-stress formula.
+    Signed stress components are supported.
+    """
+    s1 = _finite_real("sigma_1", sigma_1)
+    s2 = _finite_real("sigma_2", sigma_2)
+    s3 = _finite_real("sigma_3", sigma_3)
+
+    result = math.hypot(
+        s1 - s2,
+        s2 - s3,
+        s3 - s1,
+    ) / math.sqrt(2)
+
+    return _finite_result(result)
