@@ -1,8 +1,15 @@
 """
-Input validation utilities for pressure vessel analysis.
-Enforces type, finiteness, positivity, and physical range limits (REQ-TYP, REQ-VAL, REQ-INP).
+Input validation for pressure-vessel analysis.
+
+Validation stages:
+    Type -> Finiteness -> Positivity -> Range
+
+Within each stage:
+    P -> r_i -> t -> sigma_y
 """
+
 import math
+from numbers import Real
 
 from src.config.limits import (
     PRESSURE_MAX,
@@ -18,42 +25,62 @@ from src.errors import ValidationError
 
 
 def validate_inputs(P, r_i, t, sigma_y):
-    """Validates pressure vessel inputs, ensuring non-boolean positive floats in exact specification order."""
+    """
+    REQ-TYP-001..004, REQ-VAL-001..006, REQ-ERR-001..004:
+    Validate all inputs and return a tuple of Python floats.
+    """
     params = [
-        ("Pressure", P, PRESSURE_MIN, PRESSURE_MAX, "P", "Pressure must be positive"),
-        ("Inner radius", r_i, RADIUS_MIN, RADIUS_MAX, "r_i", "Inner radius must be positive"),
-        ("Wall thickness", t, THICKNESS_MIN, THICKNESS_MAX, "t", "Wall thickness must be positive"),
-        ("Yield strength", sigma_y, YIELD_MIN, YIELD_MAX, "sigma_y", "Yield strength must be positive"),
+        ("Pressure", "P", P, "MPa", PRESSURE_MIN, PRESSURE_MAX),
+        ("Inner radius", "r_i", r_i, "mm", RADIUS_MIN, RADIUS_MAX),
+        ("Wall thickness", "t", t, "mm", THICKNESS_MIN, THICKNESS_MAX),
+        ("Yield strength", "sigma_y", sigma_y, "MPa", YIELD_MIN, YIELD_MAX),
     ]
 
-    # 1. Type validation (REQ-TYP-001..004)
-    # Check booleans first across all params
-    for name, val, _, _, code, _ in params:
-        if isinstance(val, bool):
-            raise TypeError(f"Invalid type for {code}: must be a numeric float or int: got bool")
+    # Check all types before performing any value validation.
+    for name, code, value, unit, _, _ in params:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise TypeError(
+                f"{name} ({code}) must be a real numeric scalar: "
+                f"got {value!r} {unit}; type={type(value).__name__}"
+            )
 
-    # Check non-numeric types
-    for name, val, _, _, code, _ in params:
-        if not isinstance(val, (int, float)):
-            raise TypeError("must be a numeric float or int")
+    # Convert supported real scalars to Python floats and check finiteness.
+    converted = []
 
-    # 2. Finiteness validation (REQ-VAL-001)
-    for name, val, _, _, code, _ in params:
-        if not math.isfinite(val):
-            raise ValueError("must be finite")
+    for name, code, value, unit, minimum, maximum in params:
+        try:
+            number = float(value)
+        except (OverflowError, ValueError) as exc:
+            raise ValueError(
+                f"{name} ({code}) must be finite and representable "
+                f"as a Python float: got {value!r} {unit}"
+            ) from exc
 
-    # 3. Positivity check (REQ-VAL-002..005)
-    for name, val, _, _, code, pos_msg in params:
-        if val <= 0:
-            raise ValueError(pos_msg)
+        if not math.isfinite(number):
+            raise ValueError(
+                f"{name} ({code}) must be finite: "
+                f"got {value!r} {unit}"
+            )
 
-    # 4. Range Limits Check (REQ-VAL-006, REQ-INP)
-    for name, val, min_val, max_val, code, _ in params:
-        if val < min_val or val > max_val:
-            if name == "Pressure":
-                raise ValueError("Pressure out of range")
-            if code == "sigma_y":
-                raise ValidationError("sigma_y value out of allowable range or unit slip detected")
-            raise ValidationError(f"Parameter '{code}'={val} is out of valid range [{min_val}, {max_val}].")
+        converted.append(
+            (name, code, value, number, unit, minimum, maximum)
+        )
 
-    return float(P), float(r_i), float(t), float(sigma_y)
+    # Check positivity before checking configured ranges.
+    for name, code, original, number, unit, _, _ in converted:
+        if number <= 0:
+            raise ValueError(
+                f"{name} must be positive ({code}): "
+                f"got {original!r} {unit}"
+            )
+
+    # Positive inputs must also lie within the configured bounds.
+    for name, code, original, number, unit, minimum, maximum in converted:
+        if number < minimum or number > maximum:
+            raise ValidationError(
+                f"{name} out of range ({code}): "
+                f"expected [{minimum}, {maximum}] {unit}; "
+                f"got {original!r} {unit}"
+            )
+
+    return tuple(item[3] for item in converted)
