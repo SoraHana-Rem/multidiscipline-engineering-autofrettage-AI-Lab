@@ -105,7 +105,7 @@ Autofrettage is a separate, optional extension layered on top of the baseline mo
 | REQ-AUT-001 | Given an autofrettage pressure $P_{auto}$, inner/outer radius, and $\sigma_y$, the module computes the elastic-plastic boundary radius $r_p$ (Hearn, Vol. 2). |
 | REQ-AUT-002 | $P_{auto}$ MUST lie strictly between the initial-yield pressure and the full-yield pressure of the cylinder; outside that range the module raises `ValidationError` rather than extrapolating. |
 | REQ-AUT-003 | The module computes the residual hoop stress at the bore after elastic unload from $P_{auto}$ (purely elastic unloading assumed; no Bauschinger effect, see `docs/assumptions.md` A-AUT-03). |
-| REQ-AUT-004 | Given a working pressure $P_{working}$, the module reports an enhanced safety factor combining the baseline elastic stress state with the residual autofrettage stress. |
+| REQ-AUT-004 | When a positive working pressure is supplied, the module reports a bore-only von Mises yield safety-factor estimate. The calculation superimposes residual hoop stress on the elastic working-pressure hoop stress, uses working-pressure radial and closed-end axial stresses, and omits residual axial stress. It does not establish the minimum safety factor across the wall or guarantee improvement over the baseline. When working pressure is omitted, `safety_factor` is `None`. |
 
 
 Autofrettage input contract:

@@ -118,7 +118,13 @@ tests ──► main ──► analysis ──► validation ──► config
                              └───────────────────┘
 ```
 
-**Autofrettage branch (optional, CLI `--autofrettage-pressure`):** after the baseline result, `main.run_pipeline` calls `physics.autofrettage.calculate_autofrettage(...)`, which solves the plastic radius, computes the residual hoop stress at the bore, and returns an enhanced safety factor under the working pressure.
+**Autofrettage branch:** when requested, `main.run_pipeline` calls
+`physics.autofrettage.calculate_autofrettage(...)`. This returns the
+plastic radius, bore residual hoop stress, and an optional bore-only
+working safety-factor estimate. The estimate uses residual-hoop
+superposition, omits residual axial stress, and assumes elastic
+reloading. It does not determine the minimum safety factor across
+the wall.
 
 ## 5. Public Interfaces
 

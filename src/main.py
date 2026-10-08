@@ -94,7 +94,8 @@ def run_pipeline(P: float, r_i: float, t: float, sigma_y: float, P_auto: float =
                 print(f"  Autofrettage Press : {output_data['autofrettage']['P_auto_MPa']} MPa")
                 print(f"  Plastic Radius r_p : {output_data['autofrettage']['plastic_radius_mm']} mm")
                 print(f"  Residual Hoop Bore : {output_data['autofrettage']['residual_hoop_inner_MPa']} MPa")
-                print(f"  Enhanced SF        : {output_data['autofrettage']['autofrettage_safety_factor']}")
+                print(f"  Bore SF estimate   : {output_data['autofrettage']['autofrettage_safety_factor']}")
+                print("  Model limitation   : Residual axial stress omitted; wall minimum not assessed.")
             
             print("==================================================\n")
 

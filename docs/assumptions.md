@@ -73,7 +73,7 @@ These rules apply to Claude, Copilot, and any generative coding agents working o
 | AI-10 | No magic numbers in calculation code; all configuration constants (limits, thresholds, tolerances) must reside in `src/config/limits.py`. |
 | AI-13 | The AI tool must run `pytest` and report actual execution results. It must not claim tests pass without running them. |
 
-## 3. Autofrettage Extension Assumptions (proposed, please confirm)
+## 3. Autofrettage Extension Assumptions and Limitations
 
 These are read directly from `src/physics/autofrettage.py`. They apply only to the autofrettage extension, not to the baseline path.
 
@@ -83,3 +83,6 @@ These are read directly from `src/physics/autofrettage.py`. They apply only to t
 | A-AUT-02 | **Von Mises yielding** in the plastic zone with shear yield $k = \sigma_y / \sqrt{3}$. |
 | A-AUT-03 | **Purely elastic unloading** (Lamé) from the autofrettage pressure; reverse yielding (Bauschinger effect) is not modelled. |
 | A-AUT-04 | The autofrettage pressure must lie between initial-yield pressure and full-yield pressure; outside that range the solver raises `ValidationError`. |
+| A-AUT-05 | **Axial simplification for the working safety-factor estimate:** axial stress is the closed-end elastic working-pressure stress. Residual axial stress is omitted from this calculation. This simplification has not been independently validated for the autofrettage loading/unloading cycle. |
+| A-AUT-06 | **Bore-only assessment:** the reported autofrettage safety factor is evaluated at the inner radius. The implementation does not search the wall for the maximum equivalent stress or minimum safety factor. |
+| A-AUT-07 | **Elastic reloading assumed:** working-pressure stresses are elastically superimposed on residual stresses. Further plastic redistribution during reloading is not modelled. |

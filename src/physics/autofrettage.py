@@ -202,8 +202,14 @@ def calculate_autofrettage(
     """
     REQ-AUT-001, REQ-AUT-003, REQ-AUT-004: Return autofrettage results.
 
-    When working pressure is supplied, calculate the bore safety factor
-    using the existing residual-hoop superposition model.
+    When working pressure is supplied, return a bore-only von Mises
+    yield safety-factor estimate using residual-hoop superposition.
+
+    Working radial and closed-end axial stresses are included.
+    Residual axial stress is omitted. Elastic reloading is assumed.
+
+    This calculation does not establish the minimum safety factor
+    across the wall or guarantee improvement over the baseline.
 
     When working pressure is omitted, safety_factor is None.
     """
