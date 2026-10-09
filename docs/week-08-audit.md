@@ -1,5 +1,12 @@
 # Week 8 Technical Audit & Quality Assurance Report
 
+> Historical document retained from the Week 8 learning milestone.
+> Requirement descriptions and test names reflect that earlier draft
+> and are not the current traceability matrix.
+> The console excerpt below is illustrative, not captured execution
+> evidence; it does not independently substantiate the stated
+> 30-test pass result.
+
 ## Executive Summary
 * **Status:** PASSED
 * **Module:** Week 8 — Scripting, Input Validation & Quality Engineering
@@ -52,3 +59,4 @@ tests/test_physics.py::test_safety_factor_zero_stress PASSED          [ 36%]
 tests/test_validation.py::... (19 parametric validation tests)         [100%]
 
 ============================== 30 passed in 0.31s ==============================
+

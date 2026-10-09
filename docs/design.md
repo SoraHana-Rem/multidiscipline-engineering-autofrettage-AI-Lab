@@ -3,137 +3,123 @@
 | Field | Value |
 | :--- | :--- |
 | Document | `docs/design.md` |
-| Status | Finalized for Baseline / Capstone Template |
+| Scope | Baseline pressure-vessel analysis and optional autofrettage extension |
 | Related | `docs/requirements.md`, `docs/assumptions.md` |
 
 ## 1. Design Goals
 
-* **Separation of concerns:** validation, calculation, orchestration, and tests are separate layers with one-way dependencies.
-* **Pure physics:** calculation code has no I/O, no global state, no input validation, and no hard-coded limits or tolerances (these come from `src/config/limits.py`).
-* **Fail fast:** invalid input is rejected before any equation runs, and no partial results are returned.
-* **Traceability:** each test maps to a requirement ID in `docs/requirements.md`.
+- **Separation of concerns:** input validation, physics calculations, orchestration, presentation and verification have separate responsibilities.
+- **Calculation functions without I/O:** physics functions calculate results without reading files, printing output or generating plots. Public failure and autofrettage helpers also validate their own input contracts.
+- **Fail fast:** rejected inputs halt calculation rather than being silently repaired.
+- **Central baseline configuration:** vessel input bounds and the thin-wall selection threshold are defined in `src/config/limits.py`.
+- **Traceability:** requirement IDs connect specified behaviour to implementation and tests. Tagging is a project convention; complete coverage is not currently enforced automatically.
 
-## 2. Directory Structure
+Units are MPa for pressure and stress, and mm for geometry.
+Safety factors are dimensionless.
 
-```text
-multidiscipline-engineering-autofrettage/
-├── docs/                     # requirements, design, assumptions, reference, checklists, audits
-├── src/
-│   ├── __init__.py
-│   ├── main.py               # CLI entry point (argparse), result formatting
-│   ├── analysis.py           # orchestrator: analyze_vessel(...) -> VesselResult
-│   ├── errors.py             # PressureVesselWarning, ValidationError
-│   ├── config/
-│   │   └── limits.py         # numeric limits, ratio threshold, tolerances (single source of truth)
-│   ├── validation/
-│   │   ├── inputs.py         # type + finite + positive + range checks
-│   │   └── cross_validate.py # MATLAB-vs-Python comparison runner
-│   └── physics/
-│       ├── thin_wall.py      # hoop / longitudinal stress (Hearn Vol. 1 Ch. 9)
-│       ├── thick_wall.py     # Lamé equations (Hearn Vol. 1 Ch. 10)
-│       ├── failure.py        # von Mises, safety factor (Hearn Vol. 1 Ch. 15)
-│       └── autofrettage.py   # plastic radius, residual stress (extension, Hearn Vol. 2)
-├── tests/
-│   ├── conftest.py           # shared fixtures, reference test vectors TV-1..TV-3
-│   ├── test_validation.py
-│   ├── test_physics.py
-│   ├── test_analysis.py      # end-to-end and model-selection tests
-│   ├── test_autofrettage.py
-│   ├── test_config.py
-│   ├── test_cross_validation.py
-│   └── test_main.py          # CLI pipeline
-├── python/                   # standalone Lamé solver + plotting (independent cross-check engine)
-├── matlab/                   # MATLAB reference engine
-├── agents/                   # workspace audit scripts
-├── evaluation/, prompts/     # LLM benchmark and prompt artifacts
-├── output/plots/             # generated figures
-└── pytest.ini                # pytest configuration
-```
+## 2. Repository Structure
 
-`python_basics/` contains personal Python-learning scratch files and is not part of the module.
+| Path | Purpose |
+| :--- | :--- |
+| `src/main.py` | CLI argument parsing, calculation calls and result formatting |
+| `src/analysis.py` | Baseline analysis orchestration and `VesselResult` |
+| `src/errors.py` | `ValidationError` and `PressureVesselWarning` |
+| `src/config/limits.py` | Baseline input bounds and model-selection threshold |
+| `src/validation/inputs.py` | Type, finiteness, positivity and range validation |
+| `src/validation/cross_validate.py` | Comparison against MATLAB reference data |
+| `src/validation/matlab_reference.csv` | MATLAB reference dataset |
+| `src/validation/matlab-python-comparison.md` | Comparison documentation |
+| `src/physics/thin_wall.py` | Thin-wall hoop and longitudinal stresses |
+| `src/physics/thick_wall.py` | Lamé stresses at the bore |
+| `src/physics/failure.py` | Validated von Mises and safety-factor helpers |
+| `src/physics/autofrettage.py` | Extension validation, plastic radius and residual stresses |
+| `src/visualization/plots.py` | Residual-hoop-stress plotting from solver results |
+| `tests/conftest.py` | Shared fixtures and reference vectors |
+| `tests/test_validation.py` | Baseline input contracts and error precedence |
+| `tests/test_physics.py` | Physics helpers and numerical edge cases |
+| `tests/test_analysis.py` | Baseline integration and model selection |
+| `tests/test_autofrettage.py` | Autofrettage calculations and input boundaries |
+| `tests/test_config.py` | Configuration checks |
+| `tests/test_cross_validation.py` | Reference-comparison behaviour |
+| `tests/test_main.py` | CLI output and error handling |
+| `tests/test_plots.py` | Plot data and plastic-boundary verification |
+| `tests/test_audit_heuristics.py` | Audit text-scan behaviour and report wording |
+| `agents/` | Heuristic repository scan and report generator |
+| `matlab/` | MATLAB calculation and reference-export scripts |
+| `docs/` | Requirements, design, assumptions, references and audit documents |
+| `evaluation/` | Benchmark cases and captured verification evidence |
+| `prompts/` | Prompt experiments |
+| `learning/python_basics/` | Python learning exercises |
+| `learning/week09-11-draft/` | Earlier exploratory calculation scripts |
+| `.github/skills/` | Engineering-review skill |
+| `.github/workflows/main.yml` | CI test and coverage workflow |
+| `output/` | Existing generated/reference output files |
+| `outputs/` | Default destination for the residual-stress plot |
+| `pytest.ini` | Test discovery and project-path configuration |
+| `requirements.txt` | Python dependencies |
+
+`src/` is the application package. Files under `learning/` are earlier
+exercises and drafts, not part of the baseline application or evidence
+of independent numerical validation.
 
 ## 3. Module Boundaries
 
-| Layer | Path | Responsibility | May import | Must NOT |
-| :--- | :--- | :--- | :--- | :--- |
-| Config | `src/config/` | Numeric limits, thin/thick threshold, tolerances. | nothing | contain logic |
-| Validation | `src/validation/inputs.py` | Checks type, finiteness, positivity, and range of raw inputs. | config, errors | compute stresses |
-| Physics core | `src/physics/` | Pure functions turning valid floats into stresses. | `math`, `numpy`, `scipy` (autofrettage only), config (tolerances only), errors (autofrettage only) | validate raw input types, do I/O, emit warnings |
-| Orchestrator | `src/analysis.py` | Validates, selects model, executes physics, emits warnings. | config, validation, physics, errors | contain equations |
-| CLI | `src/main.py` | Parses arguments, calls orchestrator and autofrettage, prints results. | analysis, physics.autofrettage | contain equations |
-| Tests | `tests/` | Verify every requirement. | everything under `src/` | be imported by `src/` |
+| Component | Responsibility | Dependencies | Boundary |
+| :--- | :--- | :--- | :--- |
+| Configuration | Baseline bounds and model threshold | No application imports | Contains constants rather than calculation logic |
+| Input validation | Validate raw vessel inputs and return Python floats | Configuration, errors, standard library | Does not calculate stresses |
+| Thin/thick-wall physics | Calculate elastic stresses | Standard library as required | No file I/O, plotting or warning emission |
+| Failure helpers | Validate stress scalars; calculate von Mises stress and SF | `math`, `numbers.Real` | No vessel-range enforcement or I/O |
+| Autofrettage | Validate extension inputs; calculate loading and residual stresses | `math`, NumPy, SciPy, errors | No CLI output or plotting |
+| Baseline orchestrator | Validate, select model, calculate results and emit model warnings | Configuration, validation, physics, errors | Does not implement stress equations |
+| CLI | Parse inputs, call calculations and format output | Analysis and autofrettage | Does not implement stress equations |
+| Visualization | Plot arrays and plastic radius supplied by the solver | Autofrettage, Matplotlib, filesystem utilities | Does not duplicate solver equations |
+| Cross-validation | Load reference data and compare numerical results | NumPy, pandas, filesystem utilities | Separate verification path |
+| Audit tooling | Search selected file text and report matches/read failures | Standard library | Does not establish engineering correctness |
+| Tests | Exercise application and tooling behaviour | Application, agents, pytest | Application code does not import tests |
 
-**Numerical policy:** the failure helpers use exact-zero handling
-rather than a configurable near-zero stress cutoff. Public failure
-helpers validate real scalar types and finiteness; `safety_factor`
-also checks strength and equivalent-stress signs. Non-finite computed
-results raise `ArithmeticError`. Input bounds and the model-selection
-threshold remain in `src/config/limits.py`.
+Baseline dependencies run from CLI to orchestration, then validation
+and physics. Validation uses configuration and shared errors.
 
-Dependency rule (one-way):
+The CLI invokes autofrettage separately when requested. Visualization
+calls the autofrettage solver directly. Cross-validation and audit
+tooling have their own verification/reporting responsibilities.
 
-```text
-tests ──► main ──► analysis ──► validation ──► config
-                       │
-                       ├──► physics ──► config
-                       └──► config
-(errors.py is imported by validation, analysis and physics.autofrettage)
-```
+## 4. Baseline Data Flow
 
-## 4. Data Flow (baseline path)
+| Stage | Behaviour |
+| :--- | :--- |
+| 1. Validate | `validate_inputs(P, r_i, t, sigma_y)` checks type, finiteness, positivity and range, then returns Python floats |
+| 2. Select model | Calculate `r_i / t`; ratios at least 10 select thin-wall, smaller ratios select Lamé |
+| 3. Calculate stresses | Return hoop, longitudinal and radial stresses; thin-wall radial stress is zero |
+| 4. Evaluate failure | Calculate von Mises stress, yield safety factor and yielded status |
+| 5. Check outputs | Reject non-finite calculated stress or safety-factor values |
+| 6. Return result | Construct the frozen `VesselResult` dataclass |
 
-```text
-                    raw inputs: P, r_i, t, sigma_y
-                                  │
-                                  ▼
-                    ┌───────────────────────────┐
-                    │  analysis.analyze_vessel  │
-                    └─────────────┬─────────────┘
-                                  │ 1. validate
-                                  ▼
-                    ┌───────────────────────────┐
-                    │  validation.inputs        │──► TypeError / ValueError
-                    │  (type → finite → range)  │    (halt, no result)
-                    └─────────────┬─────────────┘
-                                  │ validated floats
-                                  │ 2. compute ratio = r_i / t
-                                  ▼
-                        ┌───────────────────┐
-                        │  ratio >= 10 ?    │  (threshold from config)
-                        └────┬─────────┬────┘
-                         yes │         │ no
-                             ▼         ▼
-                  ┌────────────────┐ ┌───────────────────────────┐
-                  │ physics.       │ │ warn PressureVesselWarning│
-                  │ thin_wall      │ │ physics.thick_wall (Lamé) │
-                  └───────┬────────┘ └─────────────┬─────────────┘
-                          └────────────┬───────────┘
-                                       │ sigma_hoop, sigma_long, sigma_radial
-                                       │ 3. failure criterion
-                                       ▼
-                             ┌───────────────────┐
-                             │ physics.failure   │
-                             │ von Mises, SF     │
-                             └─────────┬─────────┘
-                                       │ 4. finite-result check
-                                       ▼
-                             ┌───────────────────┐
-                             │  VesselResult     │──► ArithmeticError if any
-                             │ (frozen dataclass)│    value is NaN / inf
-                             └───────────────────┘
-```
+Selecting Lamé emits `PressureVesselWarning` from the orchestrator.
 
-**Autofrettage branch:** when requested, `main.run_pipeline` calls
-`physics.autofrettage.calculate_autofrettage(...)`. This returns the
-plastic radius, bore residual hoop stress, and an optional bore-only
-working safety-factor estimate. The estimate uses residual-hoop
-superposition, omits residual axial stress, and assumes elastic
-reloading. It does not determine the minimum safety factor across
-the wall.
+### Autofrettage path
+
+When requested, `main.run_pipeline` calls
+`calculate_autofrettage` after baseline analysis.
+
+The extension validates its inputs, determines the plastic radius,
+calculates loading stresses and subtracts elastic unloading stresses.
+
+When working pressure is supplied, it returns a bore-only safety-factor
+estimate using residual-hoop superposition with working-pressure radial
+and closed-end axial stresses.
+
+Residual axial stress is omitted and elastic reloading is assumed.
+The estimate does not establish the minimum safety factor across the
+wall or guarantee improvement over the baseline.
+
+When working pressure is omitted, residual stresses are calculated
+and `safety_factor` is `None`.
 
 ## 5. Public Interfaces
 
-### 5.1 Orchestrator
+### 5.1 Baseline result and orchestrator
 
 ```python
 @dataclass(frozen=True)
@@ -144,59 +130,144 @@ class VesselResult:
     sigma_vm: float        # MPa
     safety_factor: float   # dimensionless
     yielded: bool
-    model: str             # "thin_wall" | "lame_thick_wall"
+    model: str             # "thin_wall" or "lame_thick_wall"
 
-def analyze_vessel(P: float, r_i: float, t: float, sigma_y: float) -> VesselResult: ...
+def analyze_vessel(P, r_i, t, sigma_y) -> VesselResult: ...
 ```
 
-### 5.2 Validation
+### 5.2 Input validation
 
 ```python
-def validate_inputs(P, r_i, t, sigma_y) -> tuple[float, float, float, float]: ...
+def validate_inputs(P, r_i, t, sigma_y): ...
 ```
 
-### 5.3 Physics core (pure, all take and return floats unless stated)
+Returns four Python floats in the order `P`, `r_i`, `t`, `sigma_y`.
+
+### 5.3 Physics
 
 ```python
 # thin_wall.py
-def calculate_thin_wall_stress(P: float, r_i: float, t: float) -> float: ...   # hoop
-def longitudinal_stress(P: float, r_i: float, t: float) -> float: ...
+def calculate_thin_wall_stress(P, r_i, t) -> float: ...
+def longitudinal_stress(P, r_i, t) -> float: ...
 
 # thick_wall.py
-def calculate_thick_wall_stress(P: float, r_i: float, t: float) -> float: ...  # hoop at bore
-def lame_stresses_inner(P: float, r_i: float, t: float) -> tuple[float, float, float]: ...
+def calculate_thick_wall_stress(P, r_i, t) -> float: ...
+def lame_stresses_inner(P, r_i, t) -> tuple[float, float, float]: ...
 
 # failure.py
-def von_mises_plane(sigma_1: float, sigma_2: float) -> float: ...
-def von_mises_triaxial(sigma_1: float, sigma_2: float, sigma_3: float) -> float: ...
-def safety_factor(sigma_y: float, sigma_vm: float) -> float: ...
+def von_mises_plane(sigma_1, sigma_2) -> float: ...
+def von_mises_triaxial(sigma_1, sigma_2, sigma_3) -> float: ...
+def safety_factor(sigma_y, sigma_vm) -> float: ...
 
-# autofrettage.py (extension)
-def calculate_plastic_radius(P_auto: float, r_i: float, r_o: float, sigma_y: float) -> float: ...
-def calculate_autofrettage_stresses(P_auto, r_i, r_o, sigma_y, num_points: int = 100) -> dict: ...
-def calculate_autofrettage(P_auto, r_i, r_o, sigma_y, P_working=None) -> AutofrettageResult: ...
-# AutofrettageResult: r_p, residual_hoop_inner, safety_factor
+# autofrettage.py
+def calculate_plastic_radius(P_auto, r_i, r_o, sigma_y) -> float: ...
+def calculate_autofrettage_stresses(
+    P_auto, r_i, r_o, sigma_y, num_points=100
+) -> dict: ...
+def calculate_autofrettage(
+    P_auto, r_i, r_o, sigma_y, P_working=None
+) -> AutofrettageResult: ...
 ```
+
+`lame_stresses_inner` returns hoop, longitudinal and radial stresses.
+
+`AutofrettageResult` contains `r_p`, `residual_hoop_inner` and
+`safety_factor`. The latter is optional.
 
 ### 5.4 CLI
 
 ```python
-def run_pipeline(P, r_i, t, sigma_y, P_auto=None, json_output: bool = False) -> None: ...
+def run_pipeline(
+    P, r_i, t, sigma_y, P_auto=None, json_output=False
+) -> None: ...
 ```
 
-## 6. Error Handling Strategy
+### 5.5 Visualization
 
-**Numerical policy:** the failure helpers use exact-zero handling
-rather than a configurable near-zero stress cutoff. Public failure
-helpers validate real scalar types and finiteness; `safety_factor`
-also checks strength and equivalent-stress signs. Non-finite computed
-results raise `ArithmeticError`. Input bounds and the model-selection
-threshold remain in `src/config/limits.py`.
-* **No swallowing inside the module.** Only the outermost CLI (`main.run_pipeline`) catches `ValueError`, `TypeError` and `ArithmeticError`, to print a clean message and exit with status 1.
-* **Ordered checks.** Type → Finiteness → Positivity → Range. Parameters are evaluated in the order P, r_i, t, sigma_y.
-* **Exception types.** `TypeError` (bad type), `ValueError` (bad value), `ValidationError` (a `ValueError` subclass for range and autofrettage-applicability failures), `ZeroDivisionError` and `ArithmeticError` (zero or non-finite stress).
-* **Yielding is a result.** `yielded=True` is returned normally without throwing exceptions.
+```python
+def generate_residual_stress_plot(
+    r_i,
+    r_o,
+    sigma_y,
+    P_auto,
+    output_path="outputs/residual_stress.png",
+) -> str: ...
+```
+
+The plot uses the solver's radius array, residual hoop-stress array and
+plastic radius. It returns the saved image path.
+
+## 6. Validation and Error Handling
+
+### Baseline input validation
+
+Validation completes each stage across all four parameters before
+moving to the next:
+
+1. Type
+2. Finiteness and Python-float representability
+3. Positivity
+4. Configured range
+
+Within each stage, parameter order is `P`, `r_i`, `t`, `sigma_y`.
+
+Supported real numeric scalars are converted to Python floats.
+Booleans, strings, complex values, collections and arrays are rejected.
+
+### Public failure helpers
+
+Failure helpers enforce their own real-scalar and finiteness contracts.
+The von Mises helpers accept signed stress components.
+
+For `safety_factor`:
+
+- Yield strength must be positive.
+- Equivalent stress must be non-negative.
+- Exactly zero equivalent stress raises `ZeroDivisionError`.
+- Tiny positive equivalent stress has no arbitrary near-zero cutoff.
+- A non-finite calculated safety factor raises `ArithmeticError`.
+
+The von Mises helpers use algebraically equivalent norm formulations
+to reduce intermediate overflow and underflow.
+
+### Autofrettage validation
+
+Autofrettage entry points validate their extension inputs separately:
+
+- Supplied pressure, radii and strength must be finite and positive.
+- Outer radius must exceed inner radius.
+- Autofrettage pressure must lie strictly between initial and full yield.
+- Profile point count must be an integer of at least two.
+- Supplied working pressure must be finite and positive.
+
+### Errors and warnings
+
+| Condition | Response |
+| :--- | :--- |
+| Unsupported baseline/failure-helper input type | `TypeError` |
+| Invalid baseline/failure-helper finite value or sign | `ValueError` |
+| Baseline range failure | `ValidationError`, a `ValueError` subclass |
+| Autofrettage applicability/value failure | `ValidationError` |
+| Exactly zero equivalent stress in the SF helper | `ZeroDivisionError` |
+| Non-finite calculated baseline/failure-helper result | `ArithmeticError` |
+| Thick-wall model selected | `PressureVesselWarning` |
+| Predicted baseline yielding | Return `yielded=True`; do not raise an exception |
+
+The CLI catches `ValueError`, `TypeError` and `ArithmeticError`,
+prints an execution error and exits with status 1.
+Unexpected integration errors propagate.
 
 ## 7. Requirement Tagging Convention
 
-Every function in `src/` and every test in `tests/` cites at least one `REQ-` ID from `docs/requirements.md` in its docstring, for example `"""REQ-FUN-004, REQ-PRC-002: ..."""`.
+The project requires requirement references in test docstrings or
+markers. Requirement IDs belong to `docs/requirements.md`.
+
+Example:
+
+```python
+"""REQ-FUN-004, REQ-PRC-002: Verify the reference analysis result."""
+```
+
+Tagging is intended to support traceability. The current implementation
+does not automatically enforce complete tagging or demonstrate that
+every requirement has verification coverage.
