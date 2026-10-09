@@ -62,7 +62,7 @@ res(end+1) = struct('name','Hoop force balance', ...
 % 4) Code vs hand calc at boundaries
 idx = [1, N];  lab = {'r_i','r_o'};
 for j = 1:2
-    i = idx[j];
+    i = idx(j);
     cmp = { 'sigma_theta', st(i)/1e6, hand.st(j);
             'sigma_z',     sz/1e6,    hand.sz(j);
             'u_r [um]',    ur(i)*1e6, hand.ur(j);

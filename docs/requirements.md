@@ -38,29 +38,52 @@ All inputs MUST be validated **before** any stress equation executes. Validation
 
 | ID | Rule | Error raised |
 | :--- | :--- | :--- |
-| REQ-TYP-001 | Accepted types are `int` and `float` (any `numbers.Real`, including NumPy real scalars). Integers are converted to `float` internally. | — |
-| REQ-TYP-002 | `bool` MUST be rejected, even though it is a subclass of `int` in Python. | `TypeError` |
-| REQ-TYP-003 | `None`, `str`, `complex`, sequences, and arrays MUST be rejected. | `TypeError` |
-| REQ-TYP-004 | Strings MUST NOT be coerced (`"5.0"` is invalid). | `TypeError` |
+| REQ-TYP-001 | Accept scalar instances of `numbers.Real`, including Python `int`/`float` and supported NumPy integer/floating scalars. Valid inputs are converted to Python `float`. | — |
+| REQ-TYP-002 | Reject Python and NumPy booleans. | `TypeError` |
+| REQ-TYP-003 | Reject `None`, strings, complex numbers, collections and arrays, including zero-dimensional arrays. | `TypeError` |
+| REQ-TYP-004 | Do not coerce strings to numbers. `"5.0"` is invalid. | `TypeError` |
 
 ### 2.3 Value validation and error handling
 
-| ID | Condition | Error raised | Message template |
-| :--- | :--- | :--- | :--- |
-| REQ-VAL-001 | Value is `NaN` or $\pm\infty$ | `ValueError` | `"<Name> must be finite: got <value>"` |
-| REQ-VAL-002 | `P <= 0` | `ValueError` | `"Pressure must be positive: got <value> MPa"` |
-| REQ-VAL-003 | `r_i <= 0` | `ValueError` | `"Inner radius must be positive: got <value> mm"` |
-| REQ-VAL-004 | `t <= 0` | `ValueError` | `"Wall thickness must be positive: got <value> mm"` |
-| REQ-VAL-005 | `sigma_y <= 0` | `ValueError` | `"Yield strength must be positive: got <value> MPa"` |
-| REQ-VAL-006 | Any value outside its range in §2.1 (but not caught above) | `ValueError` | `"<Name> out of range [<min>, <max>] <unit>: got <value>"` |
+| ID | Condition | Error raised |
+| :--- | :--- | :--- |
+| REQ-VAL-001 | A real input is non-finite or cannot be represented as a finite Python float. | `ValueError` |
+| REQ-VAL-002 | `P <= 0` | `ValueError` |
+| REQ-VAL-003 | `r_i <= 0` | `ValueError` |
+| REQ-VAL-004 | `t <= 0` | `ValueError` |
+| REQ-VAL-005 | `sigma_y <= 0` | `ValueError` |
+| REQ-VAL-006 | A positive finite input lies outside its configured range in §2.1. | `ValidationError`, a subclass of `ValueError` |
 
 Error-handling rules:
 
-* **REQ-ERR-001:** The module MUST NOT silently clamp, round, default, or "fix" an invalid input.
-* **REQ-ERR-002:** Type checks run before value checks; a `TypeError` takes precedence over a `ValueError`.
-* **REQ-ERR-003:** When several inputs are invalid, the module reports the first failure in the order `P`, `r_i`, `t`, `sigma_y`.
-* **REQ-ERR-004:** Error messages MUST contain the parameter name, the offending value, and the unit.
-* **REQ-ERR-005:** Calculation functions MUST NOT emit `NaN` or `inf`. If a result is non-finite, raise `ArithmeticError` rather than return it.
+- **REQ-ERR-001:** Do not silently clamp, round, default or repair invalid
+  inputs. Conversion of accepted real scalars to Python float follows
+  REQ-TYP-001.
+- **REQ-ERR-002:** Validation stages run in this order: type, finiteness,
+  positivity, range. Complete each stage across all inputs before
+  proceeding to the next. Type errors therefore precede value errors.
+- **REQ-ERR-003:** Within each validation stage, check parameters in the
+  order `P`, `r_i`, `t`, `sigma_y`. Report the first failure in the
+  earliest failing stage.
+- **REQ-ERR-004:** Input-validation messages contain the descriptive
+  parameter name, identifier, offending value and expected unit.
+  Type messages also identify the supplied type.
+- **REQ-ERR-005:** Calculation results must not contain `NaN` or `inf`.
+  Raise `ArithmeticError` if a computed result is non-finite.
+
+Message forms:
+
+- Type: `<Name> (<identifier>) must be a real numeric scalar:
+  got <value> <unit>; type=<type>`
+- Finiteness: `<Name> (<identifier>) must be finite:
+  got <value> <unit>`
+- Positivity: `<Name> must be positive (<identifier>):
+  got <value> <unit>`
+- Range: `<Name> out of range (<identifier>):
+  expected [<min>, <max>] <unit>; got <value> <unit>`
+
+A finite real value that overflows Python-float conversion receives
+a message identifying the finite-representability failure.
 
 ## 3. Functional Requirements
 
@@ -105,7 +128,21 @@ Autofrettage is a separate, optional extension layered on top of the baseline mo
 | REQ-AUT-001 | Given an autofrettage pressure $P_{auto}$, inner/outer radius, and $\sigma_y$, the module computes the elastic-plastic boundary radius $r_p$ (Hearn, Vol. 2). |
 | REQ-AUT-002 | $P_{auto}$ MUST lie strictly between the initial-yield pressure and the full-yield pressure of the cylinder; outside that range the module raises `ValidationError` rather than extrapolating. |
 | REQ-AUT-003 | The module computes the residual hoop stress at the bore after elastic unload from $P_{auto}$ (purely elastic unloading assumed; no Bauschinger effect, see `docs/assumptions.md` A-AUT-03). |
-| REQ-AUT-004 | Given a working pressure $P_{working}$, the module reports an enhanced safety factor combining the baseline elastic stress state with the residual autofrettage stress. |
+| REQ-AUT-004 | When a positive working pressure is supplied, the module reports a bore-only von Mises yield safety-factor estimate. The calculation superimposes residual hoop stress on the elastic working-pressure hoop stress, uses working-pressure radial and closed-end axial stresses, and omits residual axial stress. It does not establish the minimum safety factor across the wall or guarantee improvement over the baseline. When working pressure is omitted, `safety_factor` is `None`. |
+
+
+Autofrettage input contract:
+
+    Pressure, radii and yield strength accept real numeric scalars;
+    booleans and strings are rejected.
+    Supplied scalar values must be finite and positive.
+    The outer radius must exceed the inner radius.
+    Autofrettage pressure must be strictly above initial yield and
+    strictly below full yield.
+    Profile point count must be an integer of at least two.
+    When supplied, working pressure must be finite and positive.
+    When working pressure is omitted, residual stresses are calculated
+    and safety_factor is None, meaning not calculated.
 
 ## 4. Performance & Precision Acceptance Criteria
 
@@ -118,9 +155,29 @@ Autofrettage is a separate, optional extension layered on top of the baseline mo
 | REQ-PRC-003 | Calculations use IEEE-754 double precision (`float`). |
 | REQ-PRC-004 | Results are deterministic: identical inputs yield bit-identical outputs. |
 
+#### Failure-helper numerical policy
+
+The public functions in `src/physics/failure.py` accept finite real
+numeric scalars and reject booleans, strings and non-finite inputs.
+
+For `safety_factor`, yield strength must be positive and equivalent
+stress must be non-negative. Exactly zero equivalent stress raises
+`ZeroDivisionError`. Positive equivalent stress has no arbitrary
+near-zero cutoff; a non-finite calculated safety factor raises
+`ArithmeticError`.
+
+The baseline pressure contract remains `0 < P <= 100 MPa`.
+Very small positive pressures are supported when calculations remain
+representable and the returned results are finite.
+
+The von Mises functions accept signed stress components. They use
+algebraically equivalent norm formulations to reduce intermediate
+overflow and underflow.
+
 ### 4.2 Boundary guardrails
 
 | ID | Criterion |
 | :--- | :--- |
-| REQ-BND-001 | $r_i / t = 10$ exactly selects the **thin-wall** model. |
-| REQ-BND-002 | Ratios strictly below 10 select the **thick-wall** model
+| REQ-BND-001 | `r_i / t = 10` exactly selects the thin-wall model without emitting `PressureVesselWarning`. |
+| REQ-BND-002 | Ratios strictly below 10 select the thick-wall Lamé model and emit `PressureVesselWarning`. |
+| REQ-BND-003 | Reject inputs outside the configured numerical bounds, including the documented examples of unit slips that produce out-of-range values. Inputs contain no unit metadata, so unit mistakes that remain within the bounds cannot be detected automatically. |

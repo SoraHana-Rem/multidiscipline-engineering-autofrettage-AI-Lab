@@ -1,97 +1,216 @@
-import sys
-from pathlib import Path
+"""Tests for input types, values, ranges, messages and error precedence."""
 
-# Add project root directory to sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from fractions import Fraction
 
-import math
+import numpy as np
 import pytest
+
+from src.errors import ValidationError
 from src.validation.inputs import validate_inputs
-"""
-Unit tests for raw input validation rules (REQ-TYP and REQ-VAL series).
-"""
-
-"""
-Unit tests for raw input validation rules (REQ-TYP and REQ-VAL series).
-"""
 
 
+VALID_INPUTS = {
+    "P": 2.0,
+    "r_i": 500.0,
+    "t": 5.0,
+    "sigma_y": 500.0,
+}
 
+UNITS = {
+    "P": "MPa",
+    "r_i": "mm",
+    "t": "mm",
+    "sigma_y": "MPa",
+}
 
-# ---------------------------------------------------------------------------
-# 1. Happy Path & Valid Type Handling
-# ---------------------------------------------------------------------------
 
 def test_validate_inputs_valid_floats():
-    """Valid float values should return a tuple of floats without raising errors."""
-    P, r_i, t, sigma_y = validate_inputs(2.0, 500.0, 5.0, 500.0)
-    assert (P, r_i, t, sigma_y) == (2.0, 500.0, 5.0, 500.0)
-    assert all(isinstance(val, float) for val in (P, r_i, t, sigma_y))
+    """REQ-TYP-001: Valid inputs return Python floats."""
+    result = validate_inputs(**VALID_INPUTS)
 
-
-def test_validate_inputs_integer_coercion():
-    """REQ-TYP-001: Integer inputs should be cleanly coerced to float."""
-    P, r_i, t, sigma_y = validate_inputs(2, 500, 5, 500)
-    assert (P, r_i, t, sigma_y) == (2.0, 500.0, 5.0, 500.0)
-
-
-# ---------------------------------------------------------------------------
-# 2. Type Rejection (REQ-TYP-002 through REQ-TYP-004)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize("bad_value", [True, False])
-def test_validate_inputs_rejects_bool(bad_value):
-    """REQ-TYP-002: Booleans must be rejected even though bool inherits from int."""
-    with pytest.raises(TypeError, match="must be a numeric float or int: got bool"):
-        validate_inputs(bad_value, 500.0, 5.0, 500.0)
-
-
-@pytest.mark.parametrize("bad_type", ["5.0", None, [500.0], {"t": 5.0}, 3 + 4j])
-def test_validate_inputs_rejects_invalid_types(bad_type):
-    """REQ-TYP-003 & REQ-TYP-004: Strings, None, collections, and complex numbers must raise TypeError."""
-    with pytest.raises(TypeError, match="must be a numeric float or int"):
-        validate_inputs(2.0, bad_type, 5.0, 500.0)
-
-
-# ---------------------------------------------------------------------------
-# 3. Finiteness & Positivity Guardrails (REQ-VAL-001 through REQ-VAL-005)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize("non_finite", [float("nan"), float("inf"), float("-inf")])
-def test_validate_inputs_rejects_non_finite(non_finite):
-    """REQ-VAL-001: NaN and infinity values must raise ValueError."""
-    with pytest.raises(ValueError, match="must be finite"):
-        validate_inputs(2.0, 500.0, non_finite, 500.0)
+    assert result == (2.0, 500.0, 5.0, 500.0)
+    assert all(type(value) is float for value in result)
 
 
 @pytest.mark.parametrize(
-    "P, r_i, t, sigma_y, expected_match",
+    "pressure",
     [
-        (-1.0, 500.0, 5.0, 500.0, "Pressure must be positive"),
-        (0.0, 500.0, 5.0, 500.0, "Pressure must be positive"),
-        (2.0, -10.0, 5.0, 500.0, "Inner radius must be positive"),
-        (2.0, 500.0, 0.0, 500.0, "Wall thickness must be positive"),
-        (2.0, 500.0, 5.0, -100.0, "Yield strength must be positive"),
+        2,
+        2.0,
+        np.int64(2),
+        np.float32(2),
+        np.float64(2),
+        Fraction(2, 1),
     ],
 )
-def test_validate_inputs_rejects_non_positive(P, r_i, t, sigma_y, expected_match):
-    """REQ-VAL-002..REQ-VAL-005: Zero or negative values must raise ValueError with clear messages."""
-    with pytest.raises(ValueError, match=expected_match):
-        validate_inputs(P, r_i, t, sigma_y)
+def test_validate_inputs_supported_real_scalars(pressure):
+    """REQ-TYP-001: Supported real scalar types are converted to floats."""
+    inputs = {**VALID_INPUTS, "P": pressure}
+
+    result = validate_inputs(**inputs)
+
+    assert result == (2.0, 500.0, 5.0, 500.0)
+    assert all(type(value) is float for value in result)
 
 
-# ---------------------------------------------------------------------------
-# 4. Out of Range Guardrails & Message Ordering (REQ-VAL-006 & REQ-ERR-003)
-# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("field", list(VALID_INPUTS))
+@pytest.mark.parametrize(
+    "bad_value",
+    [
+        True,
+        np.bool_(False),
+        "5.0",
+        None,
+        [5.0],
+        {"value": 5.0},
+        3 + 4j,
+        np.array(5.0),
+    ],
+)
+def test_validate_inputs_rejects_invalid_types(field, bad_value):
+    """REQ-TYP-002, REQ-TYP-003, REQ-TYP-004: Reject unsupported inputs."""
+    inputs = {**VALID_INPUTS, field: bad_value}
 
-def test_validate_inputs_out_of_range():
-    """REQ-VAL-006: Exceeding maximum parameter range limits must raise ValueError."""
-    with pytest.raises(ValueError, match="Pressure out of range"):
-        validate_inputs(150.0, 500.0, 5.0, 500.0)  # P exceeds 100.0 MPa limit
+    with pytest.raises(TypeError) as exc_info:
+        validate_inputs(**inputs)
+
+    message = str(exc_info.value)
+
+    assert f"({field})" in message
+    assert repr(bad_value) in message
+    assert UNITS[field] in message
+    assert "real numeric scalar" in message
 
 
-def test_validate_inputs_evaluation_order():
-    """REQ-ERR-003: Evaluation order must check P first, then r_i, t, sigma_y."""
-    # Both P and t are invalid; P should trigger first
-    with pytest.raises(ValueError, match="Pressure must be positive"):
-        validate_inputs(-1.0, 500.0, -5.0, 500.0)
+@pytest.mark.parametrize("field", list(VALID_INPUTS))
+@pytest.mark.parametrize(
+    "bad_value",
+    [float("nan"), float("inf"), float("-inf")],
+)
+def test_validate_inputs_rejects_non_finite(field, bad_value):
+    """REQ-VAL-001, REQ-ERR-004: Reject non-finite values with context."""
+    inputs = {**VALID_INPUTS, field: bad_value}
+
+    with pytest.raises(ValueError) as exc_info:
+        validate_inputs(**inputs)
+
+    message = str(exc_info.value)
+
+    assert f"({field})" in message
+    assert repr(bad_value) in message
+    assert UNITS[field] in message
+    assert "must be finite" in message
+
+
+@pytest.mark.parametrize("field", list(VALID_INPUTS))
+@pytest.mark.parametrize("bad_value", [0.0, -1.0])
+def test_validate_inputs_rejects_non_positive(field, bad_value):
+    """REQ-VAL-002..005, REQ-ERR-004: Reject zero and negative inputs."""
+    inputs = {**VALID_INPUTS, field: bad_value}
+
+    with pytest.raises(ValueError) as exc_info:
+        validate_inputs(**inputs)
+
+    message = str(exc_info.value)
+
+    assert f"({field})" in message
+    assert repr(bad_value) in message
+    assert UNITS[field] in message
+    assert "must be positive" in message
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("P", 100.1),
+        ("r_i", 0.5),
+        ("r_i", 5000.1),
+        ("t", 0.01),
+        ("t", 500.1),
+        ("sigma_y", 9.0),
+        ("sigma_y", 3000.1),
+    ],
+)
+def test_validate_inputs_rejects_out_of_range(field, bad_value):
+    """REQ-INP-001..004, REQ-VAL-006: Enforce configured input bounds."""
+    inputs = {**VALID_INPUTS, field: bad_value}
+
+    with pytest.raises(ValidationError) as exc_info:
+        validate_inputs(**inputs)
+
+    message = str(exc_info.value)
+
+    assert f"({field})" in message
+    assert repr(bad_value) in message
+    assert UNITS[field] in message
+    assert "out of range" in message
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        (0.1, 1.0, 0.05, 10.0),
+        (100.0, 5000.0, 500.0, 3000.0),
+    ],
+)
+def test_validate_inputs_accepts_range_boundaries(values):
+    """REQ-INP-001..004: Accept valid inclusive input boundaries."""
+    assert validate_inputs(*values) == values
+
+
+@pytest.mark.parametrize(
+    "overrides,error,expected_field,expected_text",
+    [
+        (
+            {"P": -1.0, "sigma_y": "bad"},
+            TypeError,
+            "sigma_y",
+            "real numeric scalar",
+        ),
+        (
+            {"P": "bad", "r_i": True},
+            TypeError,
+            "P",
+            "real numeric scalar",
+        ),
+        (
+            {"P": -1.0, "t": float("nan")},
+            ValueError,
+            "t",
+            "must be finite",
+        ),
+        (
+            {"P": -1.0, "t": -5.0},
+            ValueError,
+            "P",
+            "must be positive",
+        ),
+        (
+            {"P": 150.0, "r_i": 6000.0},
+            ValidationError,
+            "P",
+            "out of range",
+        ),
+    ],
+)
+def test_validate_inputs_error_precedence(
+    overrides, error, expected_field, expected_text
+):
+    """REQ-ERR-002, REQ-ERR-003: Apply stage and parameter precedence."""
+    inputs = {**VALID_INPUTS, **overrides}
+
+    with pytest.raises(error) as exc_info:
+        validate_inputs(**inputs)
+
+    message = str(exc_info.value)
+
+    assert f"({expected_field})" in message
+    assert expected_text in message
+
+
+def test_validate_inputs_rejects_float_conversion_overflow():
+    """REQ-VAL-001: An unrepresentable real input raises a clear error."""
+    inputs = {**VALID_INPUTS, "P": 10**400}
+
+    with pytest.raises(ValueError, match="finite and representable"):
+        validate_inputs(**inputs)

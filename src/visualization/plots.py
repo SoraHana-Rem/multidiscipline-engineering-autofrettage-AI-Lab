@@ -1,43 +1,71 @@
+    # -*- coding: utf-8 -*-
+"""Visualization helpers for autofrettage residual stress plots."""
+
 import os
-import numpy as np
+
 import matplotlib.pyplot as plt
+
+from src.physics.autofrettage import calculate_autofrettage_stresses
 
 
 def generate_residual_stress_plot(
-    r_i: float, 
-    r_o: float, 
-    r_p: float, 
-    sigma_y: float, 
-    P_auto: float, 
-    output_path: str = "outputs/residual_stress.png"
+    r_i: float,
+    r_o: float,
+    sigma_y: float,
+    P_auto: float,
+    output_path: str = "outputs/residual_stress.png",
 ) -> str:
-    """Generates and saves a residual hoop stress distribution plot across the wall thickness."""
+    """REQ-AUT-001, REQ-AUT-003: Plot residual hoop stresses from the solver."""
+    results = calculate_autofrettage_stresses(
+        P_auto=P_auto,
+        r_i=r_i,
+        r_o=r_o,
+        sigma_y=sigma_y,
+        num_points=200,
+    )
+
+    radii = results["radius"]
+    residual_hoop = results["sigma_theta_res"]
+    r_p = results["r_p"]
+
     dir_name = os.path.dirname(output_path)
     if dir_name:
         os.makedirs(dir_name, exist_ok=True)
 
-    radii = np.linspace(r_i, r_o, 200)
-    residual_hoop = []
+    fig, ax = plt.subplots(figsize=(9, 5))
 
-    for r in radii:
-        if r <= r_p:
-            stress = sigma_y * (1 - np.log(r_p / r) - (r_p**2 / (r_o**2 - r_i**2)) * (1 + (r_o**2 / r**2)))
-        else:
-            stress = sigma_y * (r_p**2 / (r_o**2 - r_i**2)) * (1 - (r_o**2 / r**2))
-        residual_hoop.append(stress)
+    ax.plot(
+        radii,
+        residual_hoop,
+        color="#1f77b4",
+        linewidth=2.5,
+        label="Residual Hoop Stress (MPa)",
+    )
 
-    plt.figure(figsize=(9, 5))
-    plt.plot(radii, residual_hoop, color="#1f77b4", linewidth=2.5, label="Residual Hoop Stress (MPa)")
-    plt.axvline(x=r_p, color="#d62728", linestyle="--", linewidth=1.5, label=f"Plastic Boundary (r_p = {r_p:.1f} mm)")
-    plt.axhline(0, color="gray", linestyle=":", linewidth=0.8)
+    ax.axvline(
+        x=r_p,
+        color="#d62728",
+        linestyle="--",
+        linewidth=1.5,
+        label=f"Plastic Boundary (r_p = {r_p:.1f} mm)",
+    )
 
-    plt.title("Autofrettage Residual Hoop Stress Profile", fontsize=12, fontweight="bold")
-    plt.xlabel("Wall Radius r (mm)")
-    plt.ylabel("Residual Stress (MPa)")
-    plt.grid(True, linestyle="--", alpha=0.5)
-    plt.legend(loc="best")
-    plt.tight_layout()
+    ax.axhline(0, color="gray", linestyle=":", linewidth=0.8)
 
-    plt.savefig(output_path, dpi=300)
-    plt.close()
+    ax.set_title(
+        "Autofrettage Residual Hoop Stress Profile",
+        fontsize=12,
+        fontweight="bold",
+    )
+    ax.set_xlabel("Wall Radius r (mm)")
+    ax.set_ylabel("Residual Stress (MPa)")
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(loc="best")
+    fig.tight_layout()
+
+    fig.savefig(output_path, dpi=300)
+    plt.close(fig)
+
     return output_path
+
+

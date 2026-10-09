@@ -1,2 +1,13 @@
 __pycache__/
 */__pycache__/
+
+.coverage
+.pytest_cache/
+htmlcov/
+output/
+outputs/
+.venv/
+venv/
+
+PROJECT_CODE_DUMP.txt
+dump_repo.py

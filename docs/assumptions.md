@@ -1,13 +1,10 @@
-# Document 3: `docs/assumptions.md`
-
-```markdown
 # Assumptions Register: Pressure Vessel Analysis
 
 | Field | Value |
 | :--- | :--- |
 | Document | `docs/assumptions.md` |
 | Status | Finalized for Baseline / Capstone Template |
-| Related | `docs/requirements.md`, `docs/design.md` |
+| Related | `docs/requirements.md`, `docs/design.md`, `docs/reference.md` |
 
 Each assumption has an ID. If physical operational conditions depart from an assumption, system results are invalid.
 
@@ -19,8 +16,8 @@ Each assumption has an ID. If physical operational conditions depart from an ass
 | :--- | :--- | :--- |
 | A-MAT-01 | **Isotropic** material: properties are uniform in all directions. Composites and anisotropic materials are out of scope. | Hearn, Vol. 1, Ch. 1 |
 | A-MAT-02 | **Homogeneous** material with no microstructural defects, voids, or cracks. | Hearn, Vol. 1, Ch. 1 |
-| A-MAT-03 | **Linear elastic** behaviour governed by Hooke's Law up to yield. Plastic deformation is not modelled. | Hearn, Vol. 1, Ch. 1 |
-| A-MAT-04 | **Ductile** material: the von Mises (Distortion Energy) yield criterion applies. Brittle material criteria (e.g., Rankine/Tresca) are excluded. | Hearn, Vol. 1, Ch. 15 |
+| A-MAT-03 | **Linear elastic** behaviour governed by Hooke's Law up to yield. Plastic deformation is not modelled in the baseline `analyze_vessel` path (the autofrettage extension models it separately, see Section 3). | Hearn, Vol. 1, Ch. 1 |
+| A-MAT-04 | **Ductile** material: the von Mises (Distortion Energy) yield criterion applies. Brittle-material criteria (e.g., Rankine maximum principal stress) are excluded. Tresca appears only in `docs/Engineering-Verification-Checklist.md` as an LLM cross-check, not in `src/`. | Hearn, Vol. 1, Ch. 15 |
 | A-MAT-05 | Yield strength is constant; temperature dependence and strain-hardening are excluded. | Hearn, Vol. 1, Ch. 15 |
 
 ### 1.2 Geometry
@@ -39,9 +36,9 @@ Each assumption has an ID. If physical operational conditions depart from an ass
 | :--- | :--- | :--- |
 | A-LOD-01 | **Static** internal hydrostatic pressure only. Fatigue and pressure transients are excluded. | Hearn, Vol. 1, Ch. 10 |
 | A-LOD-02 | **External pressure is zero.** Buckling under external pressure is not assessed. | Hearn, Vol. 1, Ch. 10 |
-| A-LOD-03 | **Closed-end condition:** Axial pressure load is carried by wall giving $\sigma_L = \frac{P\,r_i}{2t}$ (thin) and $\sigma_L = \frac{P a^2}{b^2 - a^2}$ (thick). | Hearn, Vol. 1, Ch. 10 |
+| A-LOD-03 | **Closed-end condition:** Axial pressure load is carried by wall giving $\sigma_L = \frac{P\,r_i}{2t}$ (thin) and $\sigma_L = \frac{P r_i^2}{r_o^2 - r_i^2}$ (thick). | Hearn, Vol. 1, Ch. 10 |
 | A-LOD-04 | Thermal stresses, aerodynamic forces, and support loads are excluded. | Hearn, Vol. 1, Ch. 10 |
-| A-LOD-05 | **Autofrettage prestress excluded:** Residual stress fields resulting from plastic pre-expansion (autofrettage) are out of scope for this baseline module. | Hearn, Vol. 2 |
+| A-LOD-05 | **Autofrettage prestress excluded from the baseline path:** `analyze_vessel` does not include residual stresses from plastic pre-expansion. Autofrettage is handled by the separate extension `src/physics/autofrettage.py` (see Section 3). | Hearn, Vol. 2 |
 
 ### 1.4 Stress State and Sign Convention
 
@@ -68,10 +65,24 @@ These rules apply to Claude, Copilot, and any generative coding agents working o
 
 | ID | Rule |
 | :--- | :--- |
+| AI-2 | Functions require standard Python type hints and NumPy-style docstrings with explicit units. |
+| AI-3 | Every generated function must be accompanied by a corresponding `pytest` case referencing a `REQ-` ID. |
 | AI-7 | Generated code **must not** silently clamp, coerce, default, or repair invalid inputs. |
 | AI-8 | `bool` values must be rejected, and `NaN` / `inf` caught at input boundaries. |
 | AI-9 | Validation belongs in `src/validation/` only; physics core functions remain pure. |
-| AI-10 | No magic numbers in calculation code; all configuration constants must reside in `src/config/limits.py`. |
-| AI-2 | Functions require standard Python type hints and NumPy-style docstrings with explicit units. |
-| AI-3 | Every generated function must be accompanied by a corresponding `pytest` case referencing a `REQ-` ID. |
+| AI-10 | No magic numbers in calculation code; all configuration constants (limits, thresholds, tolerances) must reside in `src/config/limits.py`. |
 | AI-13 | The AI tool must run `pytest` and report actual execution results. It must not claim tests pass without running them. |
+
+## 3. Autofrettage Extension Assumptions and Limitations
+
+These are read directly from `src/physics/autofrettage.py`. They apply only to the autofrettage extension, not to the baseline path.
+
+| ID | Assumption |
+| :--- | :--- |
+| A-AUT-01 | **Elastic-perfectly plastic** material: no strain hardening in the plastic zone. |
+| A-AUT-02 | **Von Mises yielding** in the plastic zone with shear yield $k = \sigma_y / \sqrt{3}$. |
+| A-AUT-03 | **Purely elastic unloading** (Lamé) from the autofrettage pressure; reverse yielding (Bauschinger effect) is not modelled. |
+| A-AUT-04 | The autofrettage pressure must lie between initial-yield pressure and full-yield pressure; outside that range the solver raises `ValidationError`. |
+| A-AUT-05 | **Axial simplification for the working safety-factor estimate:** axial stress is the closed-end elastic working-pressure stress. Residual axial stress is omitted from this calculation. This simplification has not been independently validated for the autofrettage loading/unloading cycle. |
+| A-AUT-06 | **Bore-only assessment:** the reported autofrettage safety factor is evaluated at the inner radius. The implementation does not search the wall for the maximum equivalent stress or minimum safety factor. |
+| A-AUT-07 | **Elastic reloading assumed:** working-pressure stresses are elastically superimposed on residual stresses. Further plastic redistribution during reloading is not modelled. |

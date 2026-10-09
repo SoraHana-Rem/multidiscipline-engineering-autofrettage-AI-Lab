@@ -27,20 +27,20 @@
 # Test Log
 * **FLT-01 (Unit Mismatch Fault):** PASS
   * **Payload:** $p_i = 250,000,000\text{ Pa}$, $\sigma_y = 800\text{ MPa}$.
-  * **Observed Behavior:** Execution halted under Rule `CR-01`. Error flagged for mixed pressure units[cite: 7].
+  * **Observed Behavior:** Execution halted under Rule `CR-01`. Error flagged for mixed pressure units.
 
 * **FLT-02 (Missing Variable Fault):** PASS
   * **Payload:** Omitted `<sig_y>` parameter from material properties.
-  * **Observed Behavior:** Execution halted under Rule `CR-02`. Model refused to assume default material properties and requested explicit yield strength[cite: 7].
+  * **Observed Behavior:** Execution halted under Rule `CR-02`. Model refused to assume default material properties and requested explicit yield strength.
 
   * **FLT-03 (Geometric Inversion Fault):** PASS
-  * **Payload:** $r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$[cite: 7].
-  * **Observed Behavior:** Execution halted under Rule `CR-03`. Flagged geometric inversion error ($r_i \ge r_o$) and requested corrected dimensions[cite: 7].
+  * **Payload:** $r_i = 0.2\text{ m}$, $r_o = 0.1\text{ m}$.
+  * **Observed Behavior:** Execution halted under Rule `CR-03`. Flagged geometric inversion error ($r_i \ge r_o$) and requested corrected dimensions.
 
   ## Week 4 Execution Log: MATLAB Lamé Stress Analysis Verification
 
 - **Script Executed:** `matlab/lame_stress_analysis.m`
-- **Execution Date:** 2026-09-19
+- **Execution Date:** 2026-10-05 (re-run on MATLAB R2026b after fixing a syntax error on line 65, `idx[j]` to `idx(j)`; script commit `86ff64b`; raw output in `evaluation/matlab-lame-run-log.txt`). The earlier 2026-09-19 entry could not be reproduced from the committed script; the results below are identical to it.
 - **Model Type:** Closed-end, linear-elastic, isotropic, axisymmetric thick-walled cylinder
 - **Baseline Geometry & Parameters:**
   - Inner Radius ($r_i$): $0.050\text{ m}$ ($50\text{ mm}$)

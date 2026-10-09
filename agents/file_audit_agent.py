@@ -53,47 +53,130 @@ class AuditResults:
 
 
 def run_workspace_audit() -> Dict[str, Any]:
-    """Scans key workspace files and checks structural requirements."""
+    """Run heuristic text checks, not behavioural or compliance verification."""
     results = AuditResults()
-
-    # Check 1: Traceability in requirements.md
-    req_path = DOCS_DIR / "requirements.md"
-    req_content = inspect_file_contents(req_path)
-    if "CR-01" in req_content or "Lamé" in req_content or "autofrettage" in req_content.lower():
-        results.add_check("DOC-TRACEABILITY", "PASS", "requirements.md contains physical domain models.")
-    else:
-        results.add_check("DOC-TRACEABILITY", "QUERY", "requirements.md missing expected references.")
-
-    # Read all relevant source files including physics modules
-    inputs_path = SRC_DIR / "validation" / "inputs.py"
-    errors_path = SRC_DIR / "errors.py"
-    analysis_path = SRC_DIR / "analysis.py"
-    failure_path = SRC_DIR / "physics" / "failure.py"
-    thick_wall_path = SRC_DIR / "physics" / "thick_wall.py"
-    
-    combined_src_content = (
-        inspect_file_contents(errors_path) + 
-        inspect_file_contents(analysis_path) + 
-        inspect_file_contents(inputs_path) +
-        inspect_file_contents(failure_path) +
-        inspect_file_contents(thick_wall_path)
+    results.evidence["method"] = "heuristic_text_scan"
+    results.evidence["limitations"] = (
+        "Text matches may occur in comments or unrelated code. "
+        "This scan does not execute tests or establish traceability, "
+        "input rejection, numerical correctness or engineering compliance."
     )
-    
-    # Check 2: Type Safety
-    if "isinstance(" in combined_src_content and "bool" in combined_src_content:
-        results.add_check("TYPE-GUARD-BOOL", "PASS", "Explicit boolean rejection detected in input validation.")
-    else:
-        results.add_check("TYPE-GUARD-BOOL", "FAIL", "No explicit boolean check (isinstance(..., bool)) found in src/.")
 
-    # Check 3: Zero boundary stress guard / relative error tolerance
-    if any(token in combined_src_content for token in ["1e-12", "1e-9", "ZeroDivisionError", "float('inf')"]):
-        results.add_check("NUMERICAL-GUARD-DIV0", "PASS", "Numerical edge case or zero-division tolerance guard detected in physics/validation.")
+    paths = [
+        DOCS_DIR / "requirements.md",
+        SRC_DIR / "errors.py",
+        SRC_DIR / "analysis.py",
+        SRC_DIR / "validation" / "inputs.py",
+        SRC_DIR / "physics" / "failure.py",
+        SRC_DIR / "physics" / "thick_wall.py",
+    ]
+
+    # Keep failed reads separate from searchable file content.
+    contents = {}
+    read_errors = {}
+
+    for path in paths:
+        relative_path = path.relative_to(WORKSPACE_ROOT).as_posix()
+        try:
+            contents[relative_path] = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            read_errors[relative_path] = (
+                f"{type(exc).__name__}: {exc}"
+            )
+
+    results.evidence["scanned_files"] = list(contents)
+    results.evidence["read_errors"] = read_errors
+
+    if read_errors:
+        results.add_check(
+            "FILE-READ",
+            "FAIL",
+            "Required files could not be read: "
+            + ", ".join(read_errors),
+        )
     else:
-        results.add_check("NUMERICAL-GUARD-DIV0", "QUERY", "Verify zero-division logic in physics models.")
+        results.add_check(
+            "FILE-READ",
+            "PASS",
+            "All selected files were readable.",
+        )
+
+    req_content = contents.get("docs/requirements.md", "")
+    if (
+        "CR-01" in req_content
+        or "Lamé" in req_content
+        or "autofrettage" in req_content.lower()
+    ):
+        results.add_check(
+            "DOC-TRACEABILITY",
+            "PASS",
+            "Expected domain-reference text found in requirements.md; "
+            "traceability is not verified.",
+        )
+    else:
+        results.add_check(
+            "DOC-TRACEABILITY",
+            "QUERY",
+            "Expected domain-reference text not found in requirements.md; "
+            "review required.",
+        )
+
+    combined_src_content = "\n".join(
+        content
+        for path, content in contents.items()
+        if path.startswith("src/")
+    )
+
+    if (
+        "isinstance(" in combined_src_content
+        and "bool" in combined_src_content
+    ):
+        results.add_check(
+            "TYPE-GUARD-BOOL",
+            "PASS",
+            "Both 'isinstance(' and 'bool' tokens found in source text; "
+            "boolean rejection is not verified.",
+        )
+    else:
+        results.add_check(
+            "TYPE-GUARD-BOOL",
+            "FAIL",
+            "Expected boolean-check tokens not found in source text; "
+            "this heuristic check failed.",
+        )
+
+    numerical_tokens = [
+        "1e-12",
+        "1e-9",
+        "ZeroDivisionError",
+        "float('inf')",
+    ]
+    matched_tokens = [
+        token
+        for token in numerical_tokens
+        if token in combined_src_content
+    ]
+    results.evidence["numerical_tokens_found"] = matched_tokens
+
+    if matched_tokens:
+        results.add_check(
+            "NUMERICAL-GUARD-DIV0",
+            "PASS",
+            "Numerical-marker text found in source; "
+            "numerical handling is not verified.",
+        )
+    else:
+        results.add_check(
+            "NUMERICAL-GUARD-DIV0",
+            "QUERY",
+            "Expected numerical-marker text not found in source; "
+            "review required.",
+        )
 
     return results.to_dict()
 
+
 if __name__ == "__main__":
     results = run_workspace_audit()
-    print("=== WORKSPACE AUTOMATED AUDIT REPORT ===")
+    print("=== WORKSPACE HEURISTIC TEXT SCAN ===")
     print(json.dumps(results, indent=2))
