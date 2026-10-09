@@ -450,21 +450,33 @@ This is one of the main reasons the project increasingly focuses on independent 
 
 # Repository Audit
 
-The project contains an automated file/repository audit utility:
+The repository contains a heuristic text-scanning utility:
 
-```text
-agents/file_audit_agent.py
-```
+`agents/file_audit_agent.py`
 
-The audit checks selected repository and documentation conditions and produces structured audit results.
+It reads selected documentation and source files and searches for
+domain references, boolean-check tokens and numerical-handling markers.
+Missing or unreadable required files produce a failed file-read check.
 
-An audit document can also be generated using:
+The JSON report contains individual checks, scanned-file evidence and
+an aggregate status. FAIL takes precedence over QUERY, which takes
+precedence over PASS.
 
-```text
-agents/generate_audit_doc.py
-```
+PASS means the configured text checks matched and selected files were
+readable. It does not establish requirements traceability, correct
+input rejection, numerical correctness or engineering compliance.
+Comments and unrelated code can satisfy these searches.
 
-This is an experimental governance mechanism and is being developed further so that overall audit status is derived directly from individual control results and can be used as a reliable automated quality gate.
+The utility does not execute the engineering tests. Behavioural
+verification is provided separately by pytest and numerical
+cross-validation.
+
+`agents/generate_audit_doc.py` writes these scan results to
+`docs/week-14-audit.md`, including their scope and limitations.
+The generated report provides no automatic engineering sign-off.
+
+The audit utility is experimental and is not currently sufficient
+as an engineering acceptance gate.
 
 ---
 
